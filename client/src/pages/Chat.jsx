@@ -1,3 +1,4 @@
+// client/src/pages/Chat.jsx
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -115,23 +116,25 @@ const Chat = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div
-        className="bg-white rounded-lg shadow-lg overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
         style={{ height: "calc(100vh - 200px)" }}
       >
         <div className="flex h-full">
           {/* Conversations List */}
-          <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-900">Messages</h2>
+          <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-800">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Messages
+              </h2>
             </div>
 
             {conversations.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 <p>No conversations yet</p>
                 <p className="text-sm mt-2">Start chatting with a tour guide</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {conversations.map((conv) => {
                   const isOnline = onlineUsers.includes(conv.user._id);
                   const isSelected = selectedUserId === conv.user._id;
@@ -147,36 +150,36 @@ const Chat = () => {
                         );
                         window.dispatchEvent(new PopStateEvent("popstate"));
                       }}
-                      className={`p-4 cursor-pointer hover:bg-gray-50 transition ${
+                      className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
                         isSelected
-                          ? "bg-primary-50 border-l-4 border-primary-600"
+                          ? "bg-primary-50 dark:bg-gray-700 border-l-4 border-primary-600 dark:border-primary-500"
                           : ""
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="relative">
-                          <div className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
+                          <div className="w-12 h-12 rounded-full bg-primary-600 dark:bg-primary-500 flex items-center justify-center text-white font-bold">
                             {conv.user.name.charAt(0).toUpperCase()}
                           </div>
                           {isOnline && (
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start">
-                            <p className="font-semibold text-gray-900 truncate">
+                            <p className="font-semibold text-gray-900 dark:text-white truncate">
                               {conv.user.name}
                             </p>
                             {conv.unreadCount > 0 && (
-                              <span className="bg-primary-600 text-white text-xs px-2 py-1 rounded-full">
+                              <span className="bg-primary-600 dark:bg-primary-500 text-white text-xs px-2 py-1 rounded-full">
                                 {conv.unreadCount}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 capitalize">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
                             {conv.user.role}
                           </p>
-                          <p className="text-sm text-gray-600 truncate">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                             {conv.lastMessage}
                           </p>
                         </div>
@@ -189,11 +192,11 @@ const Chat = () => {
           </div>
 
           {/* Chat Box */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
             {selectedUserId ? (
               loadingMessages ? (
                 <div className="flex-1 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 dark:border-primary-400"></div>
                 </div>
               ) : (
                 <ChatBox
@@ -205,7 +208,7 @@ const Chat = () => {
                 />
               )
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
+              <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
                 <div className="text-center">
                   <p className="text-lg">
                     Select a conversation to start chatting

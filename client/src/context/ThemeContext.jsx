@@ -12,18 +12,49 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first
     const saved = localStorage.getItem("darkMode");
-    return saved ? JSON.parse(saved) : false;
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
+    // Fall back to system preference
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   useEffect(() => {
+    // Save preference to localStorage
     localStorage.setItem("darkMode", JSON.stringify(isDarkMode));
+
+    // Apply or remove dark class on html element
+    const root = document.documentElement;
     if (isDarkMode) {
-      document.documentElement.classList.add("dark");
+      root.classList.add("dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      root.classList.remove("dark");
     }
   }, [isDarkMode]);
+
+  // Listen for system theme changes (optional)
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleChange = (e) => {
+      // Only update if user hasn't manually set a preference
+      const saved = localStorage.getItem("darkMode");
+      if (saved === null) {
+        setIsDarkMode(e.matches);
+      }
+    };
+
+    // Some browsers don't support addEventListener on mediaQuery
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    } else if (mediaQuery.addListener) {
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);

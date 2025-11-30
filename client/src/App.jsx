@@ -12,7 +12,7 @@ function App() {
   const { user } = useSelector((state) => state.auth);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />

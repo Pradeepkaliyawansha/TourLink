@@ -23,21 +23,23 @@ const getMyPackages = async (token) => {
   return response.data.data;
 };
 
-// Create package
+// Create package with images
 const createPackage = async (packageData, token) => {
   const response = await axiosInstance.post("/packages", packageData, {
     headers: {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     },
   });
   return response.data.data;
 };
 
-// Update package
+// Update package with images
 const updatePackage = async (id, packageData, token) => {
   const response = await axiosInstance.put(`/packages/${id}`, packageData, {
     headers: {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     },
   });
   return response.data.data;

@@ -76,37 +76,39 @@ const PackageForm = ({ packageData, onClose }) => {
       const packagePayload = new FormData();
 
       // Append form fields
-      packagePayload.append("title", formData.title);
-      packagePayload.append("description", formData.description);
+      packagePayload.append("title", formData.title.trim());
+      packagePayload.append("description", formData.description.trim());
       packagePayload.append("price", Number(formData.price));
-      packagePayload.append("duration", formData.duration);
-      packagePayload.append("location", formData.location);
+      packagePayload.append("duration", formData.duration.trim());
+      packagePayload.append("location", formData.location.trim());
       packagePayload.append("category", formData.category);
       packagePayload.append("maxGroupSize", Number(formData.maxGroupSize));
       packagePayload.append("difficulty", formData.difficulty);
 
-      // Process included items - append as array items
+      // Process included items as JSON array
       const includedItems = formData.included
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
 
-      includedItems.forEach((item) => {
-        packagePayload.append("included[]", item);
-      });
+      // Send as JSON string for reliable parsing
+      if (includedItems.length > 0) {
+        packagePayload.append("included", JSON.stringify(includedItems));
+      }
 
-      // Process excluded items - append as array items
+      // Process excluded items as JSON array
       const excludedItems = formData.excluded
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
 
-      excludedItems.forEach((item) => {
-        packagePayload.append("excluded[]", item);
-      });
+      // Send as JSON string for reliable parsing
+      if (excludedItems.length > 0) {
+        packagePayload.append("excluded", JSON.stringify(excludedItems));
+      }
 
       // Append existing images (for updates)
-      if (packageData) {
+      if (packageData && existingImages.length > 0) {
         existingImages.forEach((img) => {
           packagePayload.append("existingImages[]", img);
         });
@@ -116,6 +118,12 @@ const PackageForm = ({ packageData, onClose }) => {
       images.forEach((image) => {
         packagePayload.append("images", image);
       });
+
+      // Log FormData contents for debugging
+      console.log("📤 Submitting Package Data:");
+      for (let [key, value] of packagePayload.entries()) {
+        console.log(`${key}:`, value);
+      }
 
       if (packageData) {
         await dispatch(
@@ -128,7 +136,9 @@ const PackageForm = ({ packageData, onClose }) => {
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
-      alert(error.message || "Error saving package. Please try again.");
+      alert(
+        error.message || error || "Error saving package. Please try again."
+      );
     } finally {
       setUploading(false);
     }

@@ -74,6 +74,9 @@ export const getPackage = asyncHandler(async (req, res) => {
 // @route   POST /api/packages
 // @access  Private (Guide only)
 export const createPackage = asyncHandler(async (req, res) => {
+  console.log("📦 Create Package Request Body:", req.body);
+  console.log("📁 Uploaded Files:", req.files);
+
   const {
     title,
     description,
@@ -95,17 +98,61 @@ export const createPackage = asyncHandler(async (req, res) => {
   let included = [];
   let excluded = [];
 
-  if (req.body["included[]"]) {
+  // Handle included items - check multiple possible formats
+  if (req.body.included) {
+    // If sent as JSON string
+    try {
+      included = JSON.parse(req.body.included);
+    } catch {
+      // If sent as comma-separated string
+      included = req.body.included.split(",").map((item) => item.trim());
+    }
+  } else if (req.body["included[]"]) {
+    // If sent as array with [] notation
     included = Array.isArray(req.body["included[]"])
       ? req.body["included[]"]
       : [req.body["included[]"]];
   }
 
-  if (req.body["excluded[]"]) {
+  // Handle excluded items - check multiple possible formats
+  if (req.body.excluded) {
+    // If sent as JSON string
+    try {
+      excluded = JSON.parse(req.body.excluded);
+    } catch {
+      // If sent as comma-separated string
+      excluded = req.body.excluded.split(",").map((item) => item.trim());
+    }
+  } else if (req.body["excluded[]"]) {
+    // If sent as array with [] notation
     excluded = Array.isArray(req.body["excluded[]"])
       ? req.body["excluded[]"]
       : [req.body["excluded[]"]];
   }
+
+  // Filter out empty strings
+  included = included.filter((item) => item && item.trim());
+  excluded = excluded.filter((item) => item && item.trim());
+
+  // Handle uploaded images
+  const images = req.files
+    ? req.files.map((file) => `/uploads/packages/${file.filename}`)
+    : [];
+
+  console.log("✅ Processed Data:", {
+    title,
+    description,
+    price: Number(price),
+    duration,
+    location,
+    category,
+    maxGroupSize: Number(maxGroupSize) || 10,
+    difficulty: difficulty || "Moderate",
+    included,
+    excluded,
+    images,
+    guide: req.user._id,
+  });
 
   const pkg = await Package.create({
     title,
@@ -114,7 +161,7 @@ export const createPackage = asyncHandler(async (req, res) => {
     duration,
     location,
     category,
-    images: [], // Add image handling with multer if needed
+    images,
     maxGroupSize: Number(maxGroupSize) || 10,
     difficulty: difficulty || "Moderate",
     included,
@@ -132,6 +179,9 @@ export const createPackage = asyncHandler(async (req, res) => {
 // @route   PUT /api/packages/:id
 // @access  Private (Guide only)
 export const updatePackage = asyncHandler(async (req, res) => {
+  console.log("📦 Update Package Request Body:", req.body);
+  console.log("📁 Uploaded Files:", req.files);
+
   let pkg = await Package.findById(req.params.id);
 
   if (!pkg) {
@@ -145,7 +195,85 @@ export const updatePackage = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to update this package");
   }
 
-  pkg = await Package.findByIdAndUpdate(req.params.id, req.body, {
+  // Build update object
+  const updateData = {};
+
+  // Update basic fields if provided
+  if (req.body.title) updateData.title = req.body.title;
+  if (req.body.description) updateData.description = req.body.description;
+  if (req.body.price) updateData.price = Number(req.body.price);
+  if (req.body.duration) updateData.duration = req.body.duration;
+  if (req.body.location) updateData.location = req.body.location;
+  if (req.body.category) updateData.category = req.body.category;
+  if (req.body.maxGroupSize)
+    updateData.maxGroupSize = Number(req.body.maxGroupSize);
+  if (req.body.difficulty) updateData.difficulty = req.body.difficulty;
+
+  // Handle included items
+  let included = [];
+  if (req.body.included) {
+    try {
+      included = JSON.parse(req.body.included);
+    } catch {
+      included = req.body.included.split(",").map((item) => item.trim());
+    }
+  } else if (req.body["included[]"]) {
+    included = Array.isArray(req.body["included[]"])
+      ? req.body["included[]"]
+      : [req.body["included[]"]];
+  }
+  if (included.length > 0) {
+    updateData.included = included.filter((item) => item && item.trim());
+  }
+
+  // Handle excluded items
+  let excluded = [];
+  if (req.body.excluded) {
+    try {
+      excluded = JSON.parse(req.body.excluded);
+    } catch {
+      excluded = req.body.excluded.split(",").map((item) => item.trim());
+    }
+  } else if (req.body["excluded[]"]) {
+    excluded = Array.isArray(req.body["excluded[]"])
+      ? req.body["excluded[]"]
+      : [req.body["excluded[]"]];
+  }
+  if (excluded.length > 0) {
+    updateData.excluded = excluded.filter((item) => item && item.trim());
+  }
+
+  // Handle images
+  let images = [];
+
+  // Keep existing images if sent
+  if (req.body.existingImages) {
+    const existingImages = Array.isArray(req.body.existingImages)
+      ? req.body.existingImages
+      : req.body["existingImages[]"]
+      ? Array.isArray(req.body["existingImages[]"])
+        ? req.body["existingImages[]"]
+        : [req.body["existingImages[]"]]
+      : [];
+    images = [...existingImages];
+  }
+
+  // Add new uploaded images
+  if (req.files && req.files.length > 0) {
+    const newImages = req.files.map(
+      (file) => `/uploads/packages/${file.filename}`
+    );
+    images = [...images, ...newImages];
+  }
+
+  // Limit to 5 images
+  if (images.length > 0) {
+    updateData.images = images.slice(0, 5);
+  }
+
+  console.log("✅ Update Data:", updateData);
+
+  pkg = await Package.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
     runValidators: true,
   });

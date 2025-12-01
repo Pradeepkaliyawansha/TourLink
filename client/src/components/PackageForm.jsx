@@ -85,22 +85,31 @@ const PackageForm = ({ packageData, onClose }) => {
       packagePayload.append("maxGroupSize", Number(formData.maxGroupSize));
       packagePayload.append("difficulty", formData.difficulty);
 
-      // Append arrays
+      // Process included items - append as array items
       const includedItems = formData.included
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
-      packagePayload.append("included", JSON.stringify(includedItems));
 
+      includedItems.forEach((item) => {
+        packagePayload.append("included[]", item);
+      });
+
+      // Process excluded items - append as array items
       const excludedItems = formData.excluded
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
-      packagePayload.append("excluded", JSON.stringify(excludedItems));
+
+      excludedItems.forEach((item) => {
+        packagePayload.append("excluded[]", item);
+      });
 
       // Append existing images (for updates)
       if (packageData) {
-        packagePayload.append("existingImages", JSON.stringify(existingImages));
+        existingImages.forEach((img) => {
+          packagePayload.append("existingImages[]", img);
+        });
       }
 
       // Append new image files
@@ -111,15 +120,15 @@ const PackageForm = ({ packageData, onClose }) => {
       if (packageData) {
         await dispatch(
           updatePackage({ id: packageData._id, data: packagePayload })
-        );
+        ).unwrap();
       } else {
-        await dispatch(createPackage(packagePayload));
+        await dispatch(createPackage(packagePayload)).unwrap();
       }
 
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
-      alert("Error saving package. Please try again.");
+      alert(error.message || "Error saving package. Please try again.");
     } finally {
       setUploading(false);
     }

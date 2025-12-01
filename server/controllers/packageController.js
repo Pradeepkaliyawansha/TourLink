@@ -81,11 +81,8 @@ export const createPackage = asyncHandler(async (req, res) => {
     duration,
     location,
     category,
-    images,
     maxGroupSize,
     difficulty,
-    included,
-    excluded,
   } = req.body;
 
   // Validation
@@ -94,18 +91,34 @@ export const createPackage = asyncHandler(async (req, res) => {
     throw new Error("Please provide all required fields");
   }
 
+  // Parse included and excluded arrays from FormData
+  let included = [];
+  let excluded = [];
+
+  if (req.body["included[]"]) {
+    included = Array.isArray(req.body["included[]"])
+      ? req.body["included[]"]
+      : [req.body["included[]"]];
+  }
+
+  if (req.body["excluded[]"]) {
+    excluded = Array.isArray(req.body["excluded[]"])
+      ? req.body["excluded[]"]
+      : [req.body["excluded[]"]];
+  }
+
   const pkg = await Package.create({
     title,
     description,
-    price,
+    price: Number(price),
     duration,
     location,
     category,
-    images: images || [],
-    maxGroupSize,
-    difficulty,
-    included: included || [],
-    excluded: excluded || [],
+    images: [], // Add image handling with multer if needed
+    maxGroupSize: Number(maxGroupSize) || 10,
+    difficulty: difficulty || "Moderate",
+    included,
+    excluded,
     guide: req.user._id,
   });
 

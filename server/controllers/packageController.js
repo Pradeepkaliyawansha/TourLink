@@ -1,6 +1,19 @@
 import asyncHandler from "express-async-handler";
 import Package from "../models/Package.js";
 
+// Helper function to get full image URLs
+const getImageUrls = (images, req) => {
+  if (!images || images.length === 0) return [];
+
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  return images.map((image) => {
+    // If image already has full URL, return as is
+    if (image.startsWith("http")) return image;
+    // Otherwise, construct full URL
+    return `${baseUrl}${image}`;
+  });
+};
+
 // @desc    Get all packages
 // @route   GET /api/packages
 // @access  Public
@@ -9,24 +22,20 @@ export const getPackages = asyncHandler(async (req, res) => {
 
   let query = { isActive: true };
 
-  // Filter by category
   if (category && category !== "All") {
     query.category = category;
   }
 
-  // Filter by price range
   if (minPrice || maxPrice) {
     query.price = {};
     if (minPrice) query.price.$gte = Number(minPrice);
     if (maxPrice) query.price.$lte = Number(maxPrice);
   }
 
-  // Filter by location
   if (location) {
     query.location = { $regex: location, $options: "i" };
   }
 
-  // Search in title and description
   if (search) {
     query.$or = [
       { title: { $regex: search, $options: "i" } },
@@ -34,8 +43,7 @@ export const getPackages = asyncHandler(async (req, res) => {
     ];
   }
 
-  // Sort options
-  let sortOption = { createdAt: -1 }; // Default: newest first
+  let sortOption = { createdAt: -1 };
   if (sort === "price_asc") sortOption = { price: 1 };
   if (sort === "price_desc") sortOption = { price: -1 };
   if (sort === "rating") sortOption = { rating: -1 };
@@ -44,10 +52,17 @@ export const getPackages = asyncHandler(async (req, res) => {
     .populate("guide", "name email phone")
     .sort(sortOption);
 
+  // Transform images to full URLs
+  const packagesWithFullUrls = packages.map((pkg) => {
+    const pkgObj = pkg.toObject();
+    pkgObj.images = getImageUrls(pkgObj.images, req);
+    return pkgObj;
+  });
+
   res.json({
     success: true,
-    count: packages.length,
-    data: packages,
+    count: packagesWithFullUrls.length,
+    data: packagesWithFullUrls,
   });
 });
 
@@ -64,9 +79,12 @@ export const getPackage = asyncHandler(async (req, res) => {
     throw new Error("Package not found");
   }
 
+  const pkgObj = pkg.toObject();
+  pkgObj.images = getImageUrls(pkgObj.images, req);
+
   res.json({
     success: true,
-    data: pkg,
+    data: pkgObj,
   });
 });
 
@@ -88,71 +106,47 @@ export const createPackage = asyncHandler(async (req, res) => {
     difficulty,
   } = req.body;
 
-  // Validation
   if (!title || !description || !price || !duration || !location || !category) {
     res.status(400);
     throw new Error("Please provide all required fields");
   }
 
-  // Parse included and excluded arrays from FormData
   let included = [];
   let excluded = [];
 
-  // Handle included items - check multiple possible formats
   if (req.body.included) {
-    // If sent as JSON string
     try {
       included = JSON.parse(req.body.included);
     } catch {
-      // If sent as comma-separated string
       included = req.body.included.split(",").map((item) => item.trim());
     }
   } else if (req.body["included[]"]) {
-    // If sent as array with [] notation
     included = Array.isArray(req.body["included[]"])
       ? req.body["included[]"]
       : [req.body["included[]"]];
   }
 
-  // Handle excluded items - check multiple possible formats
   if (req.body.excluded) {
-    // If sent as JSON string
     try {
       excluded = JSON.parse(req.body.excluded);
     } catch {
-      // If sent as comma-separated string
       excluded = req.body.excluded.split(",").map((item) => item.trim());
     }
   } else if (req.body["excluded[]"]) {
-    // If sent as array with [] notation
     excluded = Array.isArray(req.body["excluded[]"])
       ? req.body["excluded[]"]
       : [req.body["excluded[]"]];
   }
 
-  // Filter out empty strings
   included = included.filter((item) => item && item.trim());
   excluded = excluded.filter((item) => item && item.trim());
 
-  // Handle uploaded images
+  // Store relative paths in database
   const images = req.files
     ? req.files.map((file) => `/uploads/packages/${file.filename}`)
     : [];
 
-  console.log("✅ Processed Data:", {
-    title,
-    description,
-    price: Number(price),
-    duration,
-    location,
-    category,
-    maxGroupSize: Number(maxGroupSize) || 10,
-    difficulty: difficulty || "Moderate",
-    included,
-    excluded,
-    images,
-    guide: req.user._id,
-  });
+  console.log("✅ Processed Data - Images:", images);
 
   const pkg = await Package.create({
     title,
@@ -169,9 +163,13 @@ export const createPackage = asyncHandler(async (req, res) => {
     guide: req.user._id,
   });
 
+  // Return with full URLs
+  const pkgObj = pkg.toObject();
+  pkgObj.images = getImageUrls(pkgObj.images, req);
+
   res.status(201).json({
     success: true,
-    data: pkg,
+    data: pkgObj,
   });
 });
 
@@ -189,16 +187,13 @@ export const updatePackage = asyncHandler(async (req, res) => {
     throw new Error("Package not found");
   }
 
-  // Check if user is the guide who created the package
   if (pkg.guide.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Not authorized to update this package");
   }
 
-  // Build update object
   const updateData = {};
 
-  // Update basic fields if provided
   if (req.body.title) updateData.title = req.body.title;
   if (req.body.description) updateData.description = req.body.description;
   if (req.body.price) updateData.price = Number(req.body.price);
@@ -209,7 +204,6 @@ export const updatePackage = asyncHandler(async (req, res) => {
     updateData.maxGroupSize = Number(req.body.maxGroupSize);
   if (req.body.difficulty) updateData.difficulty = req.body.difficulty;
 
-  // Handle included items
   let included = [];
   if (req.body.included) {
     try {
@@ -226,7 +220,6 @@ export const updatePackage = asyncHandler(async (req, res) => {
     updateData.included = included.filter((item) => item && item.trim());
   }
 
-  // Handle excluded items
   let excluded = [];
   if (req.body.excluded) {
     try {
@@ -243,10 +236,9 @@ export const updatePackage = asyncHandler(async (req, res) => {
     updateData.excluded = excluded.filter((item) => item && item.trim());
   }
 
-  // Handle images
+  // Handle images - strip domain if present, keep relative paths only
   let images = [];
 
-  // Keep existing images if sent
   if (req.body.existingImages) {
     const existingImages = Array.isArray(req.body.existingImages)
       ? req.body.existingImages
@@ -255,10 +247,17 @@ export const updatePackage = asyncHandler(async (req, res) => {
         ? req.body["existingImages[]"]
         : [req.body["existingImages[]"]]
       : [];
-    images = [...existingImages];
+
+    // Strip domain from existing images, keep only path
+    images = existingImages.map((img) => {
+      if (img.startsWith("http")) {
+        const url = new URL(img);
+        return url.pathname;
+      }
+      return img;
+    });
   }
 
-  // Add new uploaded images
   if (req.files && req.files.length > 0) {
     const newImages = req.files.map(
       (file) => `/uploads/packages/${file.filename}`
@@ -266,21 +265,24 @@ export const updatePackage = asyncHandler(async (req, res) => {
     images = [...images, ...newImages];
   }
 
-  // Limit to 5 images
   if (images.length > 0) {
     updateData.images = images.slice(0, 5);
   }
 
-  console.log("✅ Update Data:", updateData);
+  console.log("✅ Update Data - Images:", updateData.images);
 
   pkg = await Package.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
     runValidators: true,
   });
 
+  // Return with full URLs
+  const pkgObj = pkg.toObject();
+  pkgObj.images = getImageUrls(pkgObj.images, req);
+
   res.json({
     success: true,
-    data: pkg,
+    data: pkgObj,
   });
 });
 
@@ -295,7 +297,6 @@ export const deletePackage = asyncHandler(async (req, res) => {
     throw new Error("Package not found");
   }
 
-  // Check if user is the guide who created the package
   if (pkg.guide.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Not authorized to delete this package");
@@ -317,10 +318,16 @@ export const getMyPackages = asyncHandler(async (req, res) => {
     createdAt: -1,
   });
 
+  const packagesWithFullUrls = packages.map((pkg) => {
+    const pkgObj = pkg.toObject();
+    pkgObj.images = getImageUrls(pkgObj.images, req);
+    return pkgObj;
+  });
+
   res.json({
     success: true,
-    count: packages.length,
-    data: packages,
+    count: packagesWithFullUrls.length,
+    data: packagesWithFullUrls,
   });
 });
 
@@ -337,7 +344,6 @@ export const addReview = asyncHandler(async (req, res) => {
     throw new Error("Package not found");
   }
 
-  // Check if user already reviewed
   const alreadyReviewed = pkg.reviews.find(
     (r) => r.user.toString() === req.user._id.toString()
   );

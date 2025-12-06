@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AllPackages from "./pages/AllPackages";
+import PackageDetails from "./pages/PackageDetails";
 import MyPackages from "./pages/MyPackages";
 import Chat from "./pages/Chat";
 
@@ -25,6 +26,7 @@ function App() {
           element={!user ? <Register /> : <Navigate to="/" />}
         />
         <Route path="/packages" element={<AllPackages />} />
+        <Route path="/packages/:id" element={<PackageDetails />} />
         <Route
           path="/my-packages"
           element={

@@ -9,6 +9,7 @@ import AllPackages from "./pages/AllPackages";
 import PackageDetails from "./pages/PackageDetails";
 import MyPackages from "./pages/MyPackages";
 import Chat from "./pages/Chat";
+import ContactUs from "./pages/ContactUs";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -38,6 +39,7 @@ function App() {
           path="/chat/:userId?"
           element={user ? <Chat /> : <Navigate to="/login" />}
         />
+        <Route path="/contact" element={<ContactUs />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />

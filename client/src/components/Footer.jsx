@@ -38,7 +38,7 @@ const Footer = () => {
       { name: "Help Center", href: "#" },
       { name: "Safety", href: "#" },
       { name: "Cancellation", href: "#" },
-      { name: "Contact Us", href: "./../pages/ContactUs.jsx" },
+      { name: "Contact Us", href: "/contact" },
     ],
     discover: [
       { name: "Trust & Safety", href: "#" },

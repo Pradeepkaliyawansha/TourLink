@@ -10,6 +10,7 @@ import PackageDetails from "./pages/PackageDetails";
 import MyPackages from "./pages/MyPackages";
 import Chat from "./pages/Chat";
 import ContactUs from "./pages/ContactUs";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -40,6 +41,7 @@ function App() {
           element={user ? <Chat /> : <Navigate to="/login" />}
         />
         <Route path="/contact" element={<ContactUs />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />

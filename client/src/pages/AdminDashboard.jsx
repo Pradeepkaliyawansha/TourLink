@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import axiosInstance from "../services/axiosInstance";
 import { logout } from "../redux/authSlice";
+import AdminSettings from "../components/AdminSettings";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ const AdminDashboard = () => {
 
   const [users, setUsers] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [conversations, setConversations] = useState([]);
+  //   const [conversations, setConversations] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
 
@@ -188,7 +189,7 @@ const AdminDashboard = () => {
 
       // Count guides and tourists
       const guides = usersArray.filter((u) => u.role === "guide").length;
-      const tourists = usersArray.filter((u) => u.role === "tourist").length;
+      //   const tourists = usersArray.filter((u) => u.role === "tourist").length;
 
       setStats((prev) => ({
         ...prev,
@@ -953,28 +954,9 @@ const AdminDashboard = () => {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Detailed analytics and reporting features coming soon
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <Activity className="h-8 w-8 text-primary-600 dark:text-primary-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    User Activity
-                  </p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Growth Trends
-                  </p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <PieChart className="h-8 w-8 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Revenue Reports
-                  </p>
-                </div>
-              </div>
             </div>
           )}
+          {activeTab === "settings" && <AdminSettings />} {/* Add this line */}
         </div>
       </main>
     </div>

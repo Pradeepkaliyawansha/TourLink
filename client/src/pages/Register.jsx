@@ -55,7 +55,7 @@ const Register = () => {
       name,
       email,
       password,
-      role,
+      role, // Only tourist or guide, not admin
       phone,
     };
 
@@ -154,6 +154,9 @@ const Register = () => {
                 <option value="tourist">Tourist</option>
                 <option value="guide">Tour Guide</option>
               </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Admin accounts are created separately
+              </p>
             </div>
             <div>
               <label

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Navbar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -14,10 +14,12 @@ import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
+  const location = useLocation();
+  const isAdminRoute = location.pathname === "/admin";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <Navbar />
+      {!isAdminRoute && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route
@@ -44,7 +46,7 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-      <Footer />
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }

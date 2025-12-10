@@ -1,3 +1,4 @@
+// server/models/User.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -24,7 +25,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["tourist", "guide"],
+      enum: ["tourist", "guide", "admin"],
       default: "tourist",
     },
     phone: {

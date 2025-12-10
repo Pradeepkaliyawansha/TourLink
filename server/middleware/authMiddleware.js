@@ -39,6 +39,16 @@ export const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
+// Admin only middleware
+export const adminOnly = asyncHandler(async (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    res.status(403);
+    throw new Error("Access denied. Admin only.");
+  }
+});
+
 // Guide only middleware
 export const guideOnly = asyncHandler(async (req, res, next) => {
   if (req.user && req.user.role === "guide") {
@@ -56,5 +66,15 @@ export const touristOnly = asyncHandler(async (req, res, next) => {
   } else {
     res.status(403);
     throw new Error("Access denied. Tourist only.");
+  }
+});
+
+// Admin or Guide (for accessing admin dashboard)
+export const adminOrGuide = asyncHandler(async (req, res, next) => {
+  if (req.user && (req.user.role === "admin" || req.user.role === "guide")) {
+    next();
+  } else {
+    res.status(403);
+    throw new Error("Access denied. Admin or Guide only.");
   }
 });

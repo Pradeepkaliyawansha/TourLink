@@ -2,10 +2,19 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import authService from "../services/authService";
 
 // Get user from localStorage
-const user = JSON.parse(localStorage.getItem("user"));
+const getUserFromStorage = () => {
+  try {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.error("Error parsing user from localStorage:", error);
+    localStorage.removeItem("user");
+    return null;
+  }
+};
 
 const initialState = {
-  user: user || null,
+  user: getUserFromStorage(),
   isError: false,
   isSuccess: false,
   isLoading: false,
@@ -17,7 +26,8 @@ export const register = createAsyncThunk(
   "auth/register",
   async (userData, thunkAPI) => {
     try {
-      return await authService.register(userData);
+      const response = await authService.register(userData);
+      return response;
     } catch (error) {
       const message = error.response?.data?.message || error.message;
       return thunkAPI.rejectWithValue(message);
@@ -30,7 +40,8 @@ export const login = createAsyncThunk(
   "auth/login",
   async (userData, thunkAPI) => {
     try {
-      return await authService.login(userData);
+      const response = await authService.login(userData);
+      return response;
     } catch (error) {
       const message = error.response?.data?.message || error.message;
       return thunkAPI.rejectWithValue(message);
@@ -40,7 +51,8 @@ export const login = createAsyncThunk(
 
 // Logout user
 export const logout = createAsyncThunk("auth/logout", async () => {
-  await authService.logout();
+  authService.logout();
+  return null;
 });
 
 export const authSlice = createSlice({
@@ -53,11 +65,19 @@ export const authSlice = createSlice({
       state.isError = false;
       state.message = "";
     },
+    setUser: (state, action) => {
+      state.user = action.payload;
+      state.isSuccess = true;
+    },
   },
   extraReducers: (builder) => {
     builder
+      // Register
       .addCase(register.pending, (state) => {
         state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
       })
       .addCase(register.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -70,8 +90,12 @@ export const authSlice = createSlice({
         state.message = action.payload;
         state.user = null;
       })
+      // Login
       .addCase(login.pending, (state) => {
         state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -84,11 +108,16 @@ export const authSlice = createSlice({
         state.message = action.payload;
         state.user = null;
       })
+      // Logout
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
+        state.isSuccess = false;
+        state.isError = false;
+        state.isLoading = false;
+        state.message = "";
       });
   },
 });
 
-export const { reset } = authSlice.actions;
+export const { reset, setUser } = authSlice.actions;
 export default authSlice.reducer;

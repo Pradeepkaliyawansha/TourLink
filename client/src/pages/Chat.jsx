@@ -29,7 +29,6 @@ const Chat = () => {
     });
 
     newSocket.on("connect", () => {
-      console.log("✅ Socket connected");
       newSocket.emit("userOnline", user._id);
     });
 
@@ -41,8 +40,6 @@ const Chat = () => {
       dispatch(addMessage(message));
     });
 
-    newSocket.on("messageNotification", (data) => {
-      console.log("📨 New message notification:", data);
     });
 
     setSocket(newSocket);

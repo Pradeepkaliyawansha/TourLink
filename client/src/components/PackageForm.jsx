@@ -119,12 +119,6 @@ const PackageForm = ({ packageData, onClose }) => {
         packagePayload.append("images", image);
       });
 
-      // Log FormData contents for debugging
-      console.log("📤 Submitting Package Data:");
-      for (let [key, value] of packagePayload.entries()) {
-        console.log(`${key}:`, value);
-      }
-
       if (packageData) {
         await dispatch(
           updatePackage({ id: packageData._id, data: packagePayload })

@@ -1,6 +1,3 @@
-// FILE 1: client/src/pages/Login.jsx
-// Replace the entire Login.jsx file with this:
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -23,26 +20,25 @@ const Login = () => {
   );
 
   useEffect(() => {
+    // Handle errors
     if (isError) {
       alert(message);
       dispatch(reset());
     }
 
+    // Handle successful login
     if (isSuccess && user) {
-      console.log("Login successful. User:", user);
-      console.log("User role:", user.role);
-
-      // Clear any previous state
+      // Reset auth state
       dispatch(reset());
 
-      // Redirect based on user role
-      if (user.role === "admin") {
-        console.log("Redirecting to /admin");
-        navigate("/admin", { replace: true });
-      } else {
-        console.log("Redirecting to /");
-        navigate("/", { replace: true });
-      }
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        if (user.role === "admin") {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      }, 100);
     }
   }, [user, isError, isSuccess, message, navigate, dispatch]);
 
@@ -69,7 +65,6 @@ const Login = () => {
       isAdminLogin,
     };
 
-    console.log("Attempting login with:", { email, isAdminLogin });
     dispatch(login(userData));
   };
 

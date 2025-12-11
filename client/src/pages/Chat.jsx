@@ -40,8 +40,6 @@ const Chat = () => {
       dispatch(addMessage(message));
     });
 
-    });
-
     setSocket(newSocket);
 
     return () => {

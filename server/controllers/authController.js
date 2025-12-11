@@ -79,16 +79,24 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid email or password");
   }
 
-  // If admin login is requested, verify user is admin
-  if (isAdminLogin && user.role !== "admin") {
-    res.status(403);
-    throw new Error("Access denied. Admin credentials required.");
+  // ADMIN LOGIN TAB: Only admins can log in
+  if (isAdminLogin === true) {
+    if (user.role !== "admin") {
+      res.status(403);
+      throw new Error(
+        "Access denied. This login is for administrators only. Please use User Login."
+      );
+    }
   }
 
-  // If not admin login, but user is admin, prevent login
-  if (!isAdminLogin && user.role === "admin") {
-    res.status(403);
-    throw new Error("Admin accounts must use admin login");
+  // USER LOGIN TAB: Only tourists and guides can log in (block admins)
+  if (isAdminLogin === false) {
+    if (user.role === "admin") {
+      res.status(403);
+      throw new Error(
+        "Admin accounts must use Admin Login. Please switch to the Admin Login tab."
+      );
+    }
   }
 
   res.json({

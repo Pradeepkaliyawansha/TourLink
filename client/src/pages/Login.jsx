@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { login, reset } from "../redux/authSlice";
-import { LogIn, Shield, Eye, EyeOff } from "lucide-react";
+import { LogIn, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -56,7 +56,7 @@ const Login = () => {
     const userData = {
       email,
       password,
-      isAdminLogin,
+      isAdminLogin, // This will be true or false, not undefined
     };
 
     dispatch(login(userData));
@@ -113,12 +113,36 @@ const Login = () => {
           )}
         </div>
 
-        {isAdminLogin && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200 text-center">
-              <Shield className="h-4 w-4 inline mr-2" />
-              This is a restricted area for administrators only
-            </p>
+        {/* Info boxes based on login type */}
+        {isAdminLogin ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Shield className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+                  Administrator Access Only
+                </p>
+                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                  This portal is restricted to administrators. If you're a
+                  tourist or guide, please use the "User Login" tab.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  User Login
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  For tourists and tour guides. Admins should use the "Admin
+                  Login" tab.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

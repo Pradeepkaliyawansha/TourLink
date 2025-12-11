@@ -862,6 +862,7 @@ const AdminDashboard = () => {
             { id: "users", icon: Users, label: "Users" },
             { id: "packages", icon: Package, label: "Packages" },
             { id: "analytics", icon: BarChart3, label: "Analytics" },
+            { id: "settings", icon: Settings, label: "Settings" },
           ].map((item) => (
             <button
               key={item.id}
@@ -945,6 +946,7 @@ const AdminDashboard = () => {
           {activeTab === "dashboard" && <DashboardView />}
           {activeTab === "users" && <UsersView />}
           {activeTab === "packages" && <PackagesView />}
+          {activeTab === "settings" && <AdminSettings />}
           {activeTab === "analytics" && (
             <div className="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg border border-gray-200 dark:border-gray-700">
               <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -956,7 +958,6 @@ const AdminDashboard = () => {
               </p>
             </div>
           )}
-          {activeTab === "settings" && <AdminSettings />} {/* Add this line */}
         </div>
       </main>
     </div>

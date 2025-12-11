@@ -15,36 +15,72 @@ import AdminDashboard from "./pages/AdminDashboard";
 function App() {
   const { user } = useSelector((state) => state.auth);
   const location = useLocation();
-  const isAdminRoute = location.pathname === "/admin";
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
+  console.log("Current user:", user);
+  console.log("Current path:", location.pathname);
+  console.log("Is admin route:", isAdminRoute);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {!isAdminRoute && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
+
         <Route
           path="/login"
-          element={!user ? <Login /> : <Navigate to="/" />}
+          element={
+            !user ? (
+              <Login />
+            ) : user.role === "admin" ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
         />
+
         <Route
           path="/register"
-          element={!user ? <Register /> : <Navigate to="/" />}
+          element={!user ? <Register /> : <Navigate to="/" replace />}
         />
+
         <Route path="/packages" element={<AllPackages />} />
         <Route path="/packages/:id" element={<PackageDetails />} />
+
         <Route
           path="/my-packages"
           element={
-            user?.role === "guide" ? <MyPackages /> : <Navigate to="/" />
+            user?.role === "guide" ? (
+              <MyPackages />
+            ) : (
+              <Navigate to="/" replace />
+            )
           }
         />
+
         <Route
           path="/chat/:userId?"
-          element={user ? <Chat /> : <Navigate to="/login" />}
+          element={user ? <Chat /> : <Navigate to="/login" replace />}
         />
+
         <Route path="/contact" element={<ContactUs />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="*" element={<Navigate to="/" />} />
+
+        {/* Admin Dashboard Route */}
+        <Route
+          path="/admin"
+          element={
+            user?.role === "admin" ? (
+              <AdminDashboard />
+            ) : user ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {!isAdminRoute && <Footer />}
     </div>

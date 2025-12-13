@@ -9,32 +9,30 @@ import {
   TrendingUp,
   DollarSign,
   Star,
-  Activity,
   Search,
   Bell,
   Settings,
   LogOut,
   ChevronDown,
   Eye,
-  Edit,
+  Moon,
+  Sun,
   Trash2,
   CheckCircle,
   XCircle,
-  Filter,
   Download,
-  Calendar,
   MapPin,
   BarChart3,
-  PieChart,
   ArrowUp,
   ArrowDown,
   Menu,
   X as CloseIcon,
-  AlertCircle,
+  Home,
 } from "lucide-react";
 import axiosInstance from "../services/axiosInstance";
 import { logout } from "../redux/authSlice";
 import AdminSettings from "../components/AdminSettings";
+import { useTheme } from "../context/ThemeContext";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -45,6 +43,7 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const { isDarkMode, toggleDarkMode } = useTheme();
 
   // State for API data
   const [stats, setStats] = useState({
@@ -62,19 +61,18 @@ const AdminDashboard = () => {
 
   const [users, setUsers] = useState([]);
   const [packages, setPackages] = useState([]);
-  //   const [conversations, setConversations] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
 
-  // Check if user is admin (you'll need to add admin role to your backend)
+  // Check if user is admin or guide
   useEffect(() => {
     if (!user) {
       navigate("/login");
       return;
     }
 
-    // For now, guides can access admin (you should add proper admin role)
-    if (user.role !== "guide") {
+    // Allow both admin and guide to access (as per original design)
+    if (user.role !== "admin" && user.role !== "guide") {
       navigate("/");
       return;
     }
@@ -85,12 +83,7 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchStats(),
-        fetchUsers(),
-        fetchPackages(),
-        fetchCategoryData(),
-      ]);
+      await Promise.all([fetchStats(), fetchUsers(), fetchPackages()]);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -154,62 +147,87 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      // Note: You'll need to create an admin endpoint to get all users
-      // For now, we'll use conversation data to estimate
-      const convRes = await axiosInstance.get("/chat/conversations");
-      const conversations = convRes.data.data;
+      // Try to get all users from admin endpoint
+      const response = await axiosInstance.get("/auth/users");
+      const allUsers = response.data.data;
 
-      // Extract unique users from conversations
-      const uniqueUsers = new Map();
-      conversations.forEach((conv) => {
-        if (conv.user && !uniqueUsers.has(conv.user._id)) {
-          uniqueUsers.set(conv.user._id, {
-            id: conv.user._id,
-            name: conv.user.name,
-            email: conv.user.email || "N/A",
-            role: conv.user.role,
-            joined: formatDate(conv.lastMessageTime),
-            status: "active",
-          });
-        }
-      });
-
-      // Add current user
-      uniqueUsers.set(user._id, {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        joined: "Current session",
+      const formattedUsers = allUsers.map((u) => ({
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        joined: formatDate(u.createdAt),
         status: "active",
-      });
+      }));
 
-      const usersArray = Array.from(uniqueUsers.values());
-      setUsers(usersArray);
+      setUsers(formattedUsers);
 
-      // Count guides and tourists
-      const guides = usersArray.filter((u) => u.role === "guide").length;
-      //   const tourists = usersArray.filter((u) => u.role === "tourist").length;
+      // Count guides
+      const guides = formattedUsers.filter((u) => u.role === "guide").length;
 
       setStats((prev) => ({
         ...prev,
-        totalUsers: usersArray.length,
+        totalUsers: formattedUsers.length,
         totalGuides: guides,
         userGrowth: 12.5,
       }));
     } catch (error) {
       console.error("Error fetching users:", error);
-      // Fallback to current user only
-      setUsers([
-        {
+
+      // Fallback: Use conversation data
+      try {
+        const convRes = await axiosInstance.get("/chat/conversations");
+        const conversations = convRes.data.data;
+
+        const uniqueUsers = new Map();
+        conversations.forEach((conv) => {
+          if (conv.user && !uniqueUsers.has(conv.user._id)) {
+            uniqueUsers.set(conv.user._id, {
+              id: conv.user._id,
+              name: conv.user.name,
+              email: conv.user.email || "N/A",
+              role: conv.user.role,
+              joined: formatDate(conv.lastMessageTime),
+              status: "active",
+            });
+          }
+        });
+
+        // Add current user
+        uniqueUsers.set(user._id, {
           id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
           joined: "Current session",
           status: "active",
-        },
-      ]);
+        });
+
+        const usersArray = Array.from(uniqueUsers.values());
+        setUsers(usersArray);
+
+        const guides = usersArray.filter((u) => u.role === "guide").length;
+
+        setStats((prev) => ({
+          ...prev,
+          totalUsers: usersArray.length,
+          totalGuides: guides,
+          userGrowth: 12.5,
+        }));
+      } catch (convError) {
+        console.error("Error fetching conversations:", convError);
+        // Last fallback: just show current user
+        setUsers([
+          {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            joined: "Current session",
+            status: "active",
+          },
+        ]);
+      }
     }
   };
 
@@ -234,10 +252,6 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error("Error fetching packages:", error);
     }
-  };
-
-  const fetchCategoryData = async () => {
-    // This is calculated in fetchStats
   };
 
   const getCategoryColor = (category) => {
@@ -272,10 +286,10 @@ const AdminDashboard = () => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
 
     try {
-      // You'll need to create this endpoint
       await axiosInstance.delete(`/auth/users/${userId}`);
       setUsers(users.filter((u) => u.id !== userId));
       alert("User deleted successfully");
+      fetchStats(); // Refresh stats
     } catch (error) {
       alert(
         "Error deleting user: " +
@@ -303,7 +317,6 @@ const AdminDashboard = () => {
 
   const handleTogglePackageStatus = async (packageId, currentStatus) => {
     try {
-      // You'll need to add this endpoint to toggle package status
       const newStatus = currentStatus === "active" ? "inactive" : "active";
       await axiosInstance.put(`/packages/${packageId}`, {
         isActive: newStatus === "active",
@@ -429,7 +442,7 @@ const AdminDashboard = () => {
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">
               Revenue Overview
             </h3>
-            <select className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm border-0 focus:ring-2 focus:ring-primary-500">
+            <select className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm border-0 focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white">
               <option>Last 7 days</option>
               <option>Last 30 days</option>
               <option>Last 3 months</option>
@@ -606,22 +619,22 @@ const AdminDashboard = () => {
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
+                users.map((u) => (
                   <tr
-                    key={user.id}
+                    key={u.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold">
-                          {user.name.charAt(0).toUpperCase()}
+                          {u.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">
-                            {user.name}
+                            {u.name}
                           </p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {user.email}
+                            {u.email}
                           </p>
                         </div>
                       </div>
@@ -629,40 +642,48 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                          user.role === "guide"
+                          u.role === "guide"
                             ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+                            : u.role === "admin"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                             : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
                         }`}
                       >
-                        {user.role}
+                        {u.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                      {user.joined}
+                      {u.joined}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          user.status === "active"
+                          u.status === "active"
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                             : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                         }`}
                       >
-                        {user.status}
+                        {u.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => navigate(`/chat/${user.id}`)}
+                          onClick={() => navigate(`/chat/${u.id}`)}
                           className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                          title="Chat with user"
                         >
                           <MessageSquare className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
-                          disabled={user.id === user._id}
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={u.id === user._id || u.role === "admin"}
+                          title={
+                            u.role === "admin"
+                              ? "Cannot delete admin"
+                              : "Delete user"
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -779,6 +800,7 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => navigate(`/packages/${pkg.id}`)}
                           className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                          title="View details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -787,6 +809,9 @@ const AdminDashboard = () => {
                             handleTogglePackageStatus(pkg.id, pkg.status)
                           }
                           className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition"
+                          title={
+                            pkg.status === "active" ? "Deactivate" : "Activate"
+                          }
                         >
                           {pkg.status === "active" ? (
                             <XCircle className="h-4 w-4" />
@@ -797,6 +822,7 @@ const AdminDashboard = () => {
                         <button
                           onClick={() => handleDeletePackage(pkg.id)}
                           className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
+                          title="Delete package"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -845,7 +871,7 @@ const AdminDashboard = () => {
             )}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition text-gray-700 dark:text-gray-300"
             >
               {sidebarOpen ? (
                 <CloseIcon className="h-5 w-5" />
@@ -879,17 +905,17 @@ const AdminDashboard = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
           <button
             onClick={() => navigate("/")}
             className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
           >
-            <Settings className="h-5 w-5" />
+            <Home className="h-5 w-5" />
             {sidebarOpen && <span className="font-medium">Back to Site</span>}
           </button>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition mt-2"
+            className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
           >
             <LogOut className="h-5 w-5" />
             {sidebarOpen && <span className="font-medium">Logout</span>}
@@ -921,7 +947,17 @@ const AdminDashboard = () => {
                   <Bell className="h-5 w-5" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
-
+                <button
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Toggle dark mode"
+                >
+                  {isDarkMode ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
+                </button>
                 <div className="flex items-center space-x-3 pl-4 border-l border-gray-200 dark:border-gray-700">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold">
                     {user?.name?.charAt(0).toUpperCase()}

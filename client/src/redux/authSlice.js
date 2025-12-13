@@ -5,7 +5,9 @@ import authService from "../services/authService";
 const getUserFromStorage = () => {
   try {
     const user = localStorage.getItem("user");
-    return user ? JSON.parse(user) : null;
+    const parsed = user ? JSON.parse(user) : null;
+    console.log("authSlice: Initial user from storage:", parsed);
+    return parsed;
   } catch (error) {
     console.error("Error parsing user from localStorage:", error);
     localStorage.removeItem("user");
@@ -40,10 +42,21 @@ export const login = createAsyncThunk(
   "auth/login",
   async (userData, thunkAPI) => {
     try {
+      console.log("authSlice: Login thunk called with:", {
+        email: userData.email,
+        isAdminLogin: userData.isAdminLogin,
+      });
       const response = await authService.login(userData);
+      console.log("authSlice: Login response:", {
+        _id: response._id,
+        email: response.email,
+        role: response.role,
+        name: response.name,
+      });
       return response;
     } catch (error) {
       const message = error.response?.data?.message || error.message;
+      console.error("authSlice: Login error:", message);
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -83,6 +96,7 @@ export const authSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = true;
         state.user = action.payload;
+        console.log("authSlice: Register fulfilled, user:", action.payload);
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -96,17 +110,24 @@ export const authSlice = createSlice({
         state.isError = false;
         state.isSuccess = false;
         state.message = "";
+        console.log("authSlice: Login pending");
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
         state.user = action.payload;
+        console.log(
+          "authSlice: Login fulfilled, user role:",
+          action.payload.role
+        );
+        console.log("authSlice: Full user object:", action.payload);
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
         state.user = null;
+        console.log("authSlice: Login rejected:", action.payload);
       })
       // Logout
       .addCase(logout.fulfilled, (state) => {

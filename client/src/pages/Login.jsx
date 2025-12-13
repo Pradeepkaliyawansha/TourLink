@@ -24,23 +24,30 @@ const Login = () => {
     if (isError) {
       alert(message);
       dispatch(reset());
+      return;
     }
 
-    // Handle successful login - FIXED: Better check for admin role
+    // Handle successful login - COMPLETELY FIXED
     if (isSuccess && user) {
-      console.log("Login successful, user role:", user.role);
+      console.log("=== LOGIN SUCCESS ===");
+      console.log("User object:", user);
+      console.log("User role:", user.role);
+      console.log("User ID:", user._id);
 
-      // Reset auth state
-      dispatch(reset());
+      // Determine target route
+      const targetRoute = user.role === "admin" ? "/admin" : "/";
+      console.log("Target route:", targetRoute);
 
-      // Navigate based on role
-      if (user.role === "admin") {
-        console.log("Navigating to admin dashboard");
-        navigate("/admin", { replace: true });
-      } else {
-        console.log("Navigating to home");
-        navigate("/", { replace: true });
-      }
+      // Navigate immediately
+      navigate(targetRoute, { replace: true });
+
+      // Reset auth state after a delay to allow navigation to complete
+      const timer = setTimeout(() => {
+        console.log("Resetting auth state");
+        dispatch(reset());
+      }, 200);
+
+      return () => clearTimeout(timer);
     }
   }, [user, isError, isSuccess, message, navigate, dispatch]);
 

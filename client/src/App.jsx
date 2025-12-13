@@ -17,16 +17,30 @@ function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
 
+  console.log("App.jsx - Current user:", user);
+  console.log("App.jsx - Current location:", location.pathname);
+  console.log("App.jsx - Is admin route:", isAdminRoute);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {!isAdminRoute && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
 
-        {/* FIXED: Remove the automatic redirect on /login route */}
+        {/* Login Route - Redirect if already logged in */}
         <Route
           path="/login"
-          element={!user ? <Login /> : <Navigate to="/" replace />}
+          element={
+            user ? (
+              user.role === "admin" ? (
+                <Navigate to="/admin" replace />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            ) : (
+              <Login />
+            )
+          }
         />
 
         <Route
@@ -55,14 +69,16 @@ function App() {
 
         <Route path="/contact" element={<ContactUs />} />
 
-        {/* Admin Dashboard Route - FIXED */}
+        {/* Admin Dashboard Route */}
         <Route
           path="/admin"
           element={
-            user?.role === "admin" ? (
-              <AdminDashboard />
-            ) : user ? (
-              <Navigate to="/" replace />
+            user ? (
+              user.role === "admin" ? (
+                <AdminDashboard />
+              ) : (
+                <Navigate to="/" replace />
+              )
             ) : (
               <Navigate to="/login" replace />
             )

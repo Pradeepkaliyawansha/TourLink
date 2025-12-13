@@ -17,10 +17,6 @@ function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
 
-  console.log("App.jsx - Current user:", user);
-  console.log("App.jsx - Current location:", location.pathname);
-  console.log("App.jsx - Is admin route:", isAdminRoute);
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {!isAdminRoute && <Navbar />}

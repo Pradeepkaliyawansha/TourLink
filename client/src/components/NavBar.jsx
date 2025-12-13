@@ -1,4 +1,3 @@
-// client/src/components/NavBar.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../redux/authSlice";
@@ -10,6 +9,7 @@ import {
   Home,
   Moon,
   Sun,
+  LayoutDashboard,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
@@ -62,6 +62,17 @@ const Navbar = () => {
                     className="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     My Packages
+                  </Link>
+                )}
+
+                {/* Admin Dashboard Button - Only visible to admins */}
+                {user.role === "admin" && (
+                  <Link
+                    to="/admin"
+                    className="flex items-center space-x-1 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white px-3 py-2 rounded-md text-sm font-medium transition shadow-md hover:shadow-lg"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Dashboard</span>
                   </Link>
                 )}
 

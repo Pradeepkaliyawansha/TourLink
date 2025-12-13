@@ -26,19 +26,21 @@ const Login = () => {
       dispatch(reset());
     }
 
-    // Handle successful login
+    // Handle successful login - FIXED: Better check for admin role
     if (isSuccess && user) {
+      console.log("Login successful, user role:", user.role);
+
       // Reset auth state
       dispatch(reset());
 
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        if (user.role === "admin") {
-          navigate("/admin", { replace: true });
-        } else {
-          navigate("/", { replace: true });
-        }
-      }, 100);
+      // Navigate based on role
+      if (user.role === "admin") {
+        console.log("Navigating to admin dashboard");
+        navigate("/admin", { replace: true });
+      } else {
+        console.log("Navigating to home");
+        navigate("/", { replace: true });
+      }
     }
   }, [user, isError, isSuccess, message, navigate, dispatch]);
 
@@ -58,6 +60,8 @@ const Login = () => {
       alert("Please fill in all fields");
       return;
     }
+
+    console.log("Logging in with isAdminLogin:", isAdminLogin);
 
     const userData = {
       email,

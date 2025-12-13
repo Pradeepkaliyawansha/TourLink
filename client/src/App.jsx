@@ -23,17 +23,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
+        {/* FIXED: Remove the automatic redirect on /login route */}
         <Route
           path="/login"
-          element={
-            !user ? (
-              <Login />
-            ) : user.role === "admin" ? (
-              <Navigate to="/admin" replace />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
+          element={!user ? <Login /> : <Navigate to="/" replace />}
         />
 
         <Route
@@ -62,7 +55,7 @@ function App() {
 
         <Route path="/contact" element={<ContactUs />} />
 
-        {/* Admin Dashboard Route */}
+        {/* Admin Dashboard Route - FIXED */}
         <Route
           path="/admin"
           element={

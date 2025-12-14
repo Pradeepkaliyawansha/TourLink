@@ -10,19 +10,36 @@ import {
   Moon,
   Sun,
   LayoutDashboard,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { useState, useRef, useEffect } from "react";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const menuRef = useRef(null);
 
   const handleLogout = () => {
     dispatch(logout());
     navigate("/login");
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-50 transition-colors duration-200">
@@ -96,22 +113,91 @@ const Navbar = () => {
                   )}
                 </button>
 
-                <div className="flex items-center space-x-3 pl-3 border-l border-gray-300 dark:border-gray-700">
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                      {user.role}
-                    </p>
-                  </div>
+                {/* Profile Menu */}
+                <div className="relative" ref={menuRef}>
                   <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium transition"
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center space-x-3 pl-3 border-l border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-r-lg pr-3 transition-colors"
                   >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-600 dark:border-primary-400 shadow-md">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-left hidden sm:block">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">
+                        {user.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                        {user.role}
+                      </p>
+                    </div>
+
+                    <ChevronDown
+                      className={`h-4 w-4 text-gray-600 dark:text-gray-400 transition-transform ${
+                        showProfileMenu ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
+
+                  {/* Dropdown Menu */}
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 animate-fadeIn">
+                      {/* User Info */}
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      {/* Menu Items */}
+                      <Link
+                        to="/profile"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>My Profile</span>
+                      </Link>
+
+                      {user.role === "admin" && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      )}
+
+                      <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+                        <button
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            handleLogout();
+                          }}
+                          className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Logout</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

@@ -6,7 +6,6 @@ import {
   Users,
   Package,
   MessageSquare,
-  TrendingUp,
   DollarSign,
   Star,
   Search,
@@ -366,7 +365,7 @@ const AdminDashboard = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
+  /* eslint-disable no-unused-vars */
   const StatCard = ({ icon: Icon, title, value, change, trend, color }) => (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">

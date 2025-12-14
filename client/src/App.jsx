@@ -11,6 +11,7 @@ import MyPackages from "./pages/MyPackages";
 import Chat from "./pages/Chat";
 import ContactUs from "./pages/ContactUs";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserProfile from "./pages/UserProfile";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -46,6 +47,12 @@ function App() {
 
         <Route path="/packages" element={<AllPackages />} />
         <Route path="/packages/:id" element={<PackageDetails />} />
+
+        {/* Profile Route - Protected */}
+        <Route
+          path="/profile"
+          element={user ? <UserProfile /> : <Navigate to="/login" replace />}
+        />
 
         <Route
           path="/my-packages"

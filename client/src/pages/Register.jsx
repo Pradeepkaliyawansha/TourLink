@@ -1,9 +1,8 @@
-// client/src/pages/Register.jsx
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { register, reset } from "../redux/authSlice";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Camera, CheckCircle } from "lucide-react";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +12,10 @@ const Register = () => {
     password2: "",
     role: "tourist",
     phone: "",
+    avatar: "",
   });
+
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -21,6 +23,22 @@ const Register = () => {
   const { user, isLoading, isError, isSuccess, message } = useSelector(
     (state) => state.auth
   );
+
+  // Avatar options
+  const avatarOptions = [
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucy",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Max",
+    "https://api.dicebear.com/7.x/adventurer/svg?seed=Felix",
+    "https://api.dicebear.com/7.x/adventurer/svg?seed=Aneka",
+    "https://api.dicebear.com/7.x/bottts/svg?seed=Felix",
+    "https://api.dicebear.com/7.x/bottts/svg?seed=Aneka",
+    "https://api.dicebear.com/7.x/personas/svg?seed=Felix",
+    "https://api.dicebear.com/7.x/personas/svg?seed=Aneka",
+  ];
 
   useEffect(() => {
     if (isError) {
@@ -34,13 +52,18 @@ const Register = () => {
     dispatch(reset());
   }, [user, isError, isSuccess, message, navigate, dispatch]);
 
-  const { name, email, password, password2, role, phone } = formData;
+  const { name, email, password, password2, role, phone, avatar } = formData;
 
   const onChange = (e) => {
     setFormData((prevState) => ({
       ...prevState,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleAvatarSelect = (avatarUrl) => {
+    setFormData((prevState) => ({ ...prevState, avatar: avatarUrl }));
+    setShowAvatarPicker(false);
   };
 
   const onSubmit = (e) => {
@@ -55,8 +78,9 @@ const Register = () => {
       name,
       email,
       password,
-      role, // Only tourist or guide, not admin
+      role,
       phone,
+      avatar: avatar || avatarOptions[0], // Default to first avatar if none selected
     };
 
     dispatch(register(userData));
@@ -82,8 +106,44 @@ const Register = () => {
             </Link>
           </p>
         </div>
+
         <form className="mt-8 space-y-6" onSubmit={onSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
+            {/* Avatar Selection */}
+            <div className="flex flex-col items-center mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Choose Your Avatar
+              </label>
+              <div className="relative">
+                <div
+                  className="w-24 h-24 rounded-full border-4 border-primary-600 dark:border-primary-400 overflow-hidden cursor-pointer hover:opacity-80 transition"
+                  onClick={() => setShowAvatarPicker(true)}
+                >
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt="Selected avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <Camera className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAvatarPicker(true)}
+                  className="absolute bottom-0 right-0 p-2 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-lg transition"
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                Click to choose an avatar
+              </p>
+            </div>
+
             <div>
               <label
                 htmlFor="name"
@@ -102,6 +162,7 @@ const Register = () => {
                 onChange={onChange}
               />
             </div>
+
             <div>
               <label
                 htmlFor="email"
@@ -120,6 +181,7 @@ const Register = () => {
                 onChange={onChange}
               />
             </div>
+
             <div>
               <label
                 htmlFor="phone"
@@ -137,6 +199,7 @@ const Register = () => {
                 onChange={onChange}
               />
             </div>
+
             <div>
               <label
                 htmlFor="role"
@@ -158,6 +221,7 @@ const Register = () => {
                 Admin accounts are created separately
               </p>
             </div>
+
             <div>
               <label
                 htmlFor="password"
@@ -176,6 +240,7 @@ const Register = () => {
                 onChange={onChange}
               />
             </div>
+
             <div>
               <label
                 htmlFor="password2"
@@ -206,6 +271,55 @@ const Register = () => {
             </button>
           </div>
         </form>
+
+        {/* Avatar Picker Modal */}
+        {showAvatarPicker && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[70vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Choose Your Avatar
+                </h3>
+              </div>
+
+              <div className="p-4 overflow-y-auto max-h-[50vh]">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                  {avatarOptions.map((avatarUrl, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleAvatarSelect(avatarUrl)}
+                      className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
+                        avatar === avatarUrl
+                          ? "border-primary-600 ring-4 ring-primary-600/30"
+                          : "border-gray-200 dark:border-gray-700 hover:border-primary-400"
+                      }`}
+                    >
+                      <img
+                        src={avatarUrl}
+                        alt={`Avatar ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {avatar === avatarUrl && (
+                        <div className="absolute inset-0 bg-primary-600/20 flex items-center justify-center">
+                          <CheckCircle className="h-8 w-8 text-primary-600" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowAvatarPicker(false)}
+                  className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-medium transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

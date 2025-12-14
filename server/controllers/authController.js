@@ -6,7 +6,7 @@ import generateToken from "../utils/generateToken.js";
 // @route   POST /api/auth/register
 // @access  Public
 export const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, phone } = req.body;
+  const { name, email, password, role, phone, avatar } = req.body;
 
   // Validation
   if (!name || !email || !password) {
@@ -28,13 +28,17 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new Error("User already exists");
   }
 
-  // Create user
+  // Create user with default avatar if not provided
+  const defaultAvatar =
+    avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + name;
+
   const user = await User.create({
     name,
     email,
     password,
     role: role || "tourist",
     phone,
+    avatar: defaultAvatar,
   });
 
   if (user) {
@@ -44,6 +48,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      avatar: user.avatar,
       token: generateToken(user._id),
     });
   } else {
@@ -106,6 +111,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     role: user.role,
     phone: user.phone,
     avatar: user.avatar,
+    createdAt: user.createdAt,
     token: generateToken(user._id),
   });
 });
@@ -124,6 +130,7 @@ export const getMe = asyncHandler(async (req, res) => {
       role: user.role,
       phone: user.phone,
       avatar: user.avatar,
+      createdAt: user.createdAt,
     });
   } else {
     res.status(404);
@@ -141,6 +148,11 @@ export const updateProfile = asyncHandler(async (req, res) => {
     user.name = req.body.name || user.name;
     user.phone = req.body.phone || user.phone;
 
+    // Update avatar if provided
+    if (req.body.avatar) {
+      user.avatar = req.body.avatar;
+    }
+
     if (req.body.password) {
       user.password = req.body.password;
     }
@@ -154,6 +166,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
       role: updatedUser.role,
       phone: updatedUser.phone,
       avatar: updatedUser.avatar,
+      createdAt: updatedUser.createdAt,
       token: generateToken(updatedUser._id),
     });
   } else {
@@ -276,6 +289,7 @@ export const updateUserRole = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatar: user.avatar,
     },
   });
 });

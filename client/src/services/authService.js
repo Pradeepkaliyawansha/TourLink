@@ -2,10 +2,18 @@ import axiosInstance from "./axiosInstance";
 
 // Register user
 const register = async (userData) => {
+  console.log("authService: Registering user with data:", userData);
+
   const response = await axiosInstance.post("/auth/register", userData);
+
+  console.log("authService: Registration response:", response.data);
 
   if (response.data) {
     localStorage.setItem("user", JSON.stringify(response.data));
+    console.log(
+      "authService: User saved to localStorage with avatar:",
+      response.data.avatar
+    );
   }
 
   return response.data;
@@ -37,6 +45,7 @@ const login = async (userData) => {
         email: parsed.email,
         role: parsed.role,
         name: parsed.name,
+        avatar: parsed.avatar,
       });
     }
   }
@@ -61,11 +70,36 @@ const getMe = async (token) => {
   return response.data;
 };
 
+// Update profile
+const updateProfile = async (profileData, token) => {
+  console.log("authService: Updating profile with data:", profileData);
+
+  const response = await axiosInstance.put("/auth/profile", profileData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  console.log("authService: Profile update response:", response.data);
+
+  if (response.data) {
+    // Update localStorage
+    localStorage.setItem("user", JSON.stringify(response.data));
+    console.log(
+      "authService: Profile updated in localStorage with avatar:",
+      response.data.avatar
+    );
+  }
+
+  return response.data;
+};
+
 const authService = {
   register,
   login,
   logout,
   getMe,
+  updateProfile,
 };
 
 export default authService;

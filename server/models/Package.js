@@ -78,20 +78,7 @@ const packageSchema = new mongoose.Schema(
       min: 0,
       max: 5,
     },
-    reviews: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-        rating: Number,
-        comment: String,
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+
     isActive: {
       type: Boolean,
       default: true,

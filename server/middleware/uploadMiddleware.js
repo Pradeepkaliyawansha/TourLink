@@ -2,16 +2,27 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = "./uploads/packages";
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Create uploads directories if they don't exist
+const packageUploadsDir = "./uploads/packages";
+const reviewUploadsDir = "./uploads/reviews";
+
+if (!fs.existsSync(packageUploadsDir)) {
+  fs.mkdirSync(packageUploadsDir, { recursive: true });
+}
+
+if (!fs.existsSync(reviewUploadsDir)) {
+  fs.mkdirSync(reviewUploadsDir, { recursive: true });
 }
 
 // Configure storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadsDir);
+    // Determine destination based on route
+    if (req.path.includes("/reviews") || req.baseUrl.includes("/reviews")) {
+      cb(null, reviewUploadsDir);
+    } else {
+      cb(null, packageUploadsDir);
+    }
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);

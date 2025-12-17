@@ -7,10 +7,13 @@ import {
   Camera,
   X,
   Shield,
+  Send,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import axiosInstance from "../services/axiosInstance";
 
-const Reviews = ({ packageId, currentUser }) => {
+const Reviews = ({ packageId, guideId, currentUser }) => {
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,12 +22,20 @@ const Reviews = ({ packageId, currentUser }) => {
   const [sort, setSort] = useState("recent");
   const [error, setError] = useState(null);
 
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     rating: 5,
     title: "",
     comment: "",
     photos: [],
   });
+
+  // Check if current user is the guide
+  const isGuide = currentUser && currentUser._id === guideId;
 
   useEffect(() => {
     loadReviews();
@@ -152,6 +163,82 @@ const Reviews = ({ packageId, currentUser }) => {
     }
   };
 
+  const handleStartReply = (reviewId) => {
+    setReplyingTo(reviewId);
+    setReplyMessage("");
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+    setReplyMessage("");
+  };
+
+  const handleSubmitReply = async (reviewId) => {
+    if (!replyMessage.trim()) {
+      alert("Please enter a reply message");
+      return;
+    }
+
+    setReplyLoading(true);
+    try {
+      const response = await axiosInstance.post(`/reviews/${reviewId}/reply`, {
+        message: replyMessage.trim(),
+      });
+
+      console.log("Reply submitted:", response.data);
+
+      // Update the review with the new reply
+      setReviews(
+        reviews.map((review) => {
+          if (review._id === reviewId) {
+            return {
+              ...review,
+              guideReply: response.data.data,
+            };
+          }
+          return review;
+        })
+      );
+
+      setReplyingTo(null);
+      setReplyMessage("");
+      alert("Reply posted successfully!");
+    } catch (error) {
+      console.error("Error submitting reply:", error);
+      alert(error.response?.data?.message || "Failed to post reply");
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  const handleDeleteReply = async (reviewId) => {
+    if (!window.confirm("Are you sure you want to delete your reply?")) {
+      return;
+    }
+
+    try {
+      // You'll need to add this endpoint to your backend
+      await axiosInstance.delete(`/reviews/${reviewId}/reply`);
+
+      // Update the review to remove the reply
+      setReviews(
+        reviews.map((review) => {
+          if (review._id === reviewId) {
+            const { guideReply, ...rest } = review;
+            console.log(guideReply);
+            return rest;
+          }
+          return review;
+        })
+      );
+
+      alert("Reply deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      alert(error.response?.data?.message || "Failed to delete reply");
+    }
+  };
+
   const StarRating = ({ rating, onChange, readonly = false }) => {
     return (
       <div className="flex space-x-1">
@@ -260,7 +347,7 @@ const Reviews = ({ packageId, currentUser }) => {
           </select>
         </div>
 
-        {currentUser && (
+        {currentUser && !isGuide && (
           <button
             onClick={() => setShowReviewForm(!showReviewForm)}
             className="px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg font-medium transition"
@@ -457,13 +544,25 @@ const Reviews = ({ packageId, currentUser }) => {
                 </div>
               )}
 
+              {/* Guide Reply */}
               {review.guideReply && (
                 <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                      Guide's Response
-                    </span>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                        Guide's Response
+                      </span>
+                    </div>
+                    {isGuide && (
+                      <button
+                        onClick={() => handleDeleteReply(review._id)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        title="Delete reply"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     {review.guideReply.message}
@@ -474,6 +573,51 @@ const Reviews = ({ packageId, currentUser }) => {
                 </div>
               )}
 
+              {/* Reply Form (for guides) */}
+              {isGuide && !review.guideReply && replyingTo === review._id && (
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Your Reply
+                  </label>
+                  <textarea
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Write your response..."
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 resize-none"
+                  />
+                  <div className="flex justify-end space-x-2 mt-2">
+                    <button
+                      onClick={handleCancelReply}
+                      disabled={replyLoading}
+                      className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSubmitReply(review._id)}
+                      disabled={replyLoading}
+                      className="flex items-center space-x-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition disabled:opacity-50"
+                    >
+                      <Send className="h-4 w-4" />
+                      <span>{replyLoading ? "Posting..." : "Post Reply"}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Reply Button (for guides who haven't replied) */}
+              {isGuide && !review.guideReply && replyingTo !== review._id && (
+                <button
+                  onClick={() => handleStartReply(review._id)}
+                  className="mt-4 flex items-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Reply to this review</span>
+                </button>
+              )}
+
+              {/* Vote Buttons */}
               <div className="flex items-center space-x-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => handleVote(review._id, "helpful")}

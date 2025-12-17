@@ -23,14 +23,12 @@ export const createReview = asyncHandler(async (req, res) => {
     throw new Error("Please provide all required fields");
   }
 
-  // Check if package exists
   const pkg = await Package.findById(packageId);
   if (!pkg) {
     res.status(404);
     throw new Error("Package not found");
   }
 
-  // Check if user already reviewed this package
   const existingReview = await Review.findOne({
     package: packageId,
     user: req.user._id,
@@ -41,12 +39,10 @@ export const createReview = asyncHandler(async (req, res) => {
     throw new Error("You have already reviewed this package");
   }
 
-  // Store relative paths for photos
   const photos = req.files
     ? req.files.map((file) => `/uploads/reviews/${file.filename}`)
     : [];
 
-  // Create review
   const review = await Review.create({
     package: packageId,
     user: req.user._id,
@@ -54,13 +50,10 @@ export const createReview = asyncHandler(async (req, res) => {
     title: title.trim(),
     comment: comment.trim(),
     photos,
-    isVerifiedBooking: false, // Can be implemented with booking system
+    isVerifiedBooking: false,
   });
 
-  // Update package rating
   await updatePackageRating(packageId);
-
-  // Populate user info
   await review.populate("user", "name avatar");
 
   const reviewObj = review.toObject();
@@ -79,7 +72,6 @@ export const getPackageReviews = asyncHandler(async (req, res) => {
   const { packageId } = req.params;
   const { rating, sort = "-createdAt", page = 1, limit = 10 } = req.query;
 
-  // Build query
   const query = {
     package: packageId,
     moderationStatus: "approved",
@@ -89,7 +81,6 @@ export const getPackageReviews = asyncHandler(async (req, res) => {
     query.rating = Number(rating);
   }
 
-  // Sorting options
   let sortOption = {};
   switch (sort) {
     case "recent":
@@ -119,7 +110,6 @@ export const getPackageReviews = asyncHandler(async (req, res) => {
 
   const total = await Review.countDocuments(query);
 
-  // Transform photos to full URLs
   const reviewsWithFullUrls = reviews.map((review) => {
     const reviewObj = review.toObject();
     reviewObj.photos = getImageUrls(reviewObj.photos, req);
@@ -174,7 +164,6 @@ export const getReviewStats = asyncHandler(async (req, res) => {
 
     stats.averageRating = (totalRating / reviews.length).toFixed(1);
 
-    // Convert to percentages
     Object.keys(stats.ratingDistribution).forEach((key) => {
       stats.ratingDistribution[key] = Math.round(
         (stats.ratingDistribution[key] / reviews.length) * 100
@@ -206,7 +195,6 @@ export const updateReview = asyncHandler(async (req, res) => {
 
   const { rating, title, comment } = req.body;
 
-  // Save edit history
   if (rating || comment) {
     review.editHistory.push({
       editedAt: new Date(),
@@ -220,19 +208,15 @@ export const updateReview = asyncHandler(async (req, res) => {
   if (title) review.title = title.trim();
   if (comment) review.comment = comment.trim();
 
-  // Handle new photos
   if (req.files && req.files.length > 0) {
     const newPhotos = req.files.map(
       (file) => `/uploads/reviews/${file.filename}`
     );
-    review.photos = [...review.photos, ...newPhotos].slice(0, 5); // Max 5 photos
+    review.photos = [...review.photos, ...newPhotos].slice(0, 5);
   }
 
   await review.save();
-
-  // Update package rating
   await updatePackageRating(review.package);
-
   await review.populate("user", "name avatar");
 
   const reviewObj = review.toObject();
@@ -262,8 +246,6 @@ export const deleteReview = asyncHandler(async (req, res) => {
 
   const packageId = review.package;
   await review.deleteOne();
-
-  // Update package rating
   await updatePackageRating(packageId);
 
   res.json({
@@ -276,7 +258,7 @@ export const deleteReview = asyncHandler(async (req, res) => {
 // @route   POST /api/reviews/:id/vote
 // @access  Private
 export const voteOnReview = asyncHandler(async (req, res) => {
-  const { voteType } = req.body; // 'helpful' or 'unhelpful'
+  const { voteType } = req.body;
   const review = await Review.findById(req.params.id);
 
   if (!review) {
@@ -291,7 +273,6 @@ export const voteOnReview = asyncHandler(async (req, res) => {
 
   const userId = req.user._id;
 
-  // Remove any existing votes from this user
   review.helpfulVotes = review.helpfulVotes.filter(
     (vote) => vote.user.toString() !== userId.toString()
   );
@@ -299,7 +280,6 @@ export const voteOnReview = asyncHandler(async (req, res) => {
     (vote) => vote.user.toString() !== userId.toString()
   );
 
-  // Add new vote
   if (voteType === "helpful") {
     review.helpfulVotes.push({ user: userId });
   } else {
@@ -332,7 +312,6 @@ export const addGuideReply = asyncHandler(async (req, res) => {
     throw new Error("Review not found");
   }
 
-  // Check if user is the guide of this package
   if (review.package.guide.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Only the package guide can reply to reviews");
@@ -355,6 +334,39 @@ export const addGuideReply = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: review.guideReply,
+  });
+});
+
+// @desc    Delete guide reply from a review
+// @route   DELETE /api/reviews/:id/reply
+// @access  Private (Guide only)
+export const deleteGuideReply = asyncHandler(async (req, res) => {
+  const review = await Review.findById(req.params.id).populate(
+    "package",
+    "guide"
+  );
+
+  if (!review) {
+    res.status(404);
+    throw new Error("Review not found");
+  }
+
+  if (!review.guideReply || !review.guideReply.message) {
+    res.status(404);
+    throw new Error("No reply found for this review");
+  }
+
+  if (review.package.guide.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Only the guide who replied can delete the reply");
+  }
+
+  review.guideReply = undefined;
+  await review.save();
+
+  res.json({
+    success: true,
+    message: "Reply deleted successfully",
   });
 });
 
@@ -413,7 +425,6 @@ export const moderateReview = asyncHandler(async (req, res) => {
 
   await review.save();
 
-  // Update package rating if status changed
   if (status === "approved") {
     await updatePackageRating(review.package);
   }
@@ -430,11 +441,9 @@ export const moderateReview = asyncHandler(async (req, res) => {
 export const getGuideResponseRate = asyncHandler(async (req, res) => {
   const { guideId } = req.params;
 
-  // Get all packages by this guide
   const packages = await Package.find({ guide: guideId }).select("_id");
   const packageIds = packages.map((pkg) => pkg._id);
 
-  // Get all reviews for these packages
   const totalReviews = await Review.countDocuments({
     package: { $in: packageIds },
     moderationStatus: "approved",
@@ -490,6 +499,7 @@ export default {
   deleteReview,
   voteOnReview,
   addGuideReply,
+  deleteGuideReply,
   getAllReviews,
   moderateReview,
   getGuideResponseRate,

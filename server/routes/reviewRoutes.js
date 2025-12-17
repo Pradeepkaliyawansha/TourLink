@@ -7,6 +7,7 @@ import {
   deleteReview,
   voteOnReview,
   addGuideReply,
+  deleteGuideReply,
   getAllReviews,
   moderateReview,
   getGuideResponseRate,
@@ -29,6 +30,7 @@ router.post("/:id/vote", protect, voteOnReview);
 
 // Guide routes
 router.post("/:id/reply", protect, guideOnly, addGuideReply);
+router.delete("/:id/reply", protect, guideOnly, deleteGuideReply); // Add this line
 
 // Admin routes
 router.get("/admin/all", protect, adminOnly, getAllReviews);

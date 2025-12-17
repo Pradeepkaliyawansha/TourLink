@@ -8,6 +8,7 @@ import authRoutes from "./routes/authRoutes.js";
 import packageRoutes from "./routes/packageRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import { initializeSocket } from "./sockets/chatSocket.js";
 
 dotenv.config();
@@ -43,6 +44,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -51,6 +53,9 @@ app.get("/api/health", (req, res) => {
 
 // Initialize Socket.IO
 initializeSocket(io);
+
+// Make io accessible to routes via app locals
+app.locals.io = io;
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -66,4 +71,5 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.IO server ready`);
+  console.log(`🔔 Notification system initialized`);
 });

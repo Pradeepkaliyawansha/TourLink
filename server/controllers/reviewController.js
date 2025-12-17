@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import Review from "../models/Review.js";
 import Package from "../models/Package.js";
+import { notificationService } from "../sockets/chatSocket.js";
 
 // Helper function to get full image URLs
 const getImageUrls = (images, req) => {
@@ -58,6 +59,21 @@ export const createReview = asyncHandler(async (req, res) => {
 
   const reviewObj = review.toObject();
   reviewObj.photos = getImageUrls(reviewObj.photos, req);
+
+  // Send notification to guide
+  if (
+    notificationService &&
+    pkg.guide._id.toString() !== req.user._id.toString()
+  ) {
+    await notificationService.sendReviewNotification(
+      pkg.guide._id,
+      req.user._id,
+      req.user.name,
+      packageId,
+      pkg.title,
+      rating
+    );
+  }
 
   res.status(201).json({
     success: true,
@@ -302,10 +318,9 @@ export const voteOnReview = asyncHandler(async (req, res) => {
 // @access  Private (Guide only)
 export const addGuideReply = asyncHandler(async (req, res) => {
   const { message } = req.body;
-  const review = await Review.findById(req.params.id).populate(
-    "package",
-    "guide"
-  );
+  const review = await Review.findById(req.params.id)
+    .populate("package", "guide title")
+    .populate("user", "_id name");
 
   if (!review) {
     res.status(404);
@@ -330,6 +345,20 @@ export const addGuideReply = asyncHandler(async (req, res) => {
 
   await review.save();
   await review.populate("guideReply.repliedBy", "name avatar");
+
+  // Send notification to reviewer
+  if (
+    notificationService &&
+    review.user._id.toString() !== req.user._id.toString()
+  ) {
+    await notificationService.sendReviewReplyNotification(
+      review.user._id,
+      req.user._id,
+      req.user.name,
+      review.package._id,
+      review.package.title
+    );
+  }
 
   res.json({
     success: true,

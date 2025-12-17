@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useState, useRef, useEffect } from "react";
+import NotificationCenter from "./NotificationCenter"; // Import NotificationCenter
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -100,6 +101,9 @@ const Navbar = () => {
                   <MessageCircle className="h-4 w-4" />
                   <span>Chat</span>
                 </Link>
+
+                {/* Notification Center - NEW */}
+                <NotificationCenter />
 
                 <button
                   onClick={toggleDarkMode}

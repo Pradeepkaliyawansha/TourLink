@@ -1,9 +1,13 @@
 import Message from "../models/Message.js";
-import User from "../models/User.js";
+import NotificationService from "../services/notificationService.js";
 
 const users = new Map(); // Store active users
+let notificationService;
 
 export const initializeSocket = (io) => {
+  // Initialize notification service with io
+  notificationService = new NotificationService(io);
+
   io.on("connection", (socket) => {
     console.log(`✅ User connected: ${socket.id}`);
 
@@ -11,6 +15,9 @@ export const initializeSocket = (io) => {
     socket.on("userOnline", async (userId) => {
       users.set(userId, socket.id);
       socket.userId = userId;
+
+      // Join user to their personal notification room
+      socket.join(userId.toString());
 
       // Notify all clients about online users
       io.emit("onlineUsers", Array.from(users.keys()));
@@ -49,14 +56,22 @@ export const initializeSocket = (io) => {
         // Emit to room
         io.to(roomId).emit("receiveMessage", newMessage);
 
-        // If receiver is online, send notification
+        // Send notification if receiver is not in the chat room
         const receiverSocketId = users.get(receiverId);
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit("messageNotification", {
-            from: senderId,
-            message: message.substring(0, 50),
-            timestamp: newMessage.createdAt,
-          });
+        const isReceiverInRoom =
+          receiverSocketId &&
+          io.sockets.adapter.rooms.get(roomId)?.has(receiverSocketId);
+
+        if (!isReceiverInRoom && notificationService) {
+          const messagePreview =
+            message.length > 50 ? message.substring(0, 50) + "..." : message;
+
+          await notificationService.sendMessageNotification(
+            receiverId,
+            senderId,
+            newMessage.sender.name,
+            messagePreview
+          );
         }
 
         console.log(`📨 Message sent in room ${roomId}`);
@@ -87,9 +102,12 @@ export const initializeSocket = (io) => {
     socket.on("disconnect", () => {
       if (socket.userId) {
         users.delete(socket.userId);
+        socket.leave(socket.userId.toString());
         io.emit("onlineUsers", Array.from(users.keys()));
         console.log(`❌ User ${socket.userId} disconnected`);
       }
     });
   });
 };
+
+export { notificationService };

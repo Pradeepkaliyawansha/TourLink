@@ -12,6 +12,7 @@ import Chat from "./pages/Chat";
 import ContactUs from "./pages/ContactUs";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserProfile from "./pages/UserProfile";
+import NotificationSettings from "./pages/NotificationSettings"; // NEW
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -52,6 +53,14 @@ function App() {
         <Route
           path="/profile"
           element={user ? <UserProfile /> : <Navigate to="/login" replace />}
+        />
+
+        {/* Notification Settings - NEW */}
+        <Route
+          path="/notifications/settings"
+          element={
+            user ? <NotificationSettings /> : <Navigate to="/login" replace />
+          }
         />
 
         <Route

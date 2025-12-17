@@ -71,6 +71,7 @@ const packageSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
     rating: {
       type: Number,
@@ -86,12 +87,23 @@ const packageSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+packageSchema.virtual("reviewCount", {
+  ref: "Review",
+  localField: "_id",
+  foreignField: "package",
+  count: true,
+});
 
 // Index for search optimization
 packageSchema.index({ title: "text", description: "text", location: "text" });
 packageSchema.index({ category: 1, price: 1 });
+packageSchema.index({ rating: -1 });
+packageSchema.index({ createdAt: -1 });
 
 const Package = mongoose.model("Package", packageSchema);
 

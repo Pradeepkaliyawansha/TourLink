@@ -7,19 +7,17 @@ import {
   Camera,
   X,
   Shield,
-  Edit2,
-  Trash2,
 } from "lucide-react";
+import axiosInstance from "../services/axiosInstance";
 
-const EnhancedReviews = ({ packageId, currentUser }) => {
+const Reviews = ({ packageId, currentUser }) => {
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("recent");
-  const [selectedPhotos, setSelectedPhotos] = useState([]);
-  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     rating: 5,
@@ -35,15 +33,18 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
 
   const loadReviews = async () => {
     setLoading(true);
+    setError(null);
     try {
       const filterParam = filter !== "all" ? `&rating=${filter}` : "";
-      const response = await fetch(
-        `/api/reviews/${packageId}?sort=${sort}${filterParam}`
+      const response = await axiosInstance.get(
+        `/reviews/${packageId}?sort=${sort}${filterParam}`
       );
-      const data = await response.json();
-      setReviews(data.data || []);
+      console.log("Reviews loaded:", response.data);
+      setReviews(response.data.data || []);
     } catch (error) {
       console.error("Error loading reviews:", error);
+      setError("Failed to load reviews");
+      setReviews([]);
     } finally {
       setLoading(false);
     }
@@ -51,11 +52,12 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
 
   const loadStats = async () => {
     try {
-      const response = await fetch(`/api/reviews/${packageId}/stats`);
-      const data = await response.json();
-      setStats(data.data);
+      const response = await axiosInstance.get(`/reviews/${packageId}/stats`);
+      console.log("Stats loaded:", response.data);
+      setStats(response.data.data);
     } catch (error) {
       console.error("Error loading stats:", error);
+      setStats(null);
     }
   };
 
@@ -75,7 +77,14 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
     });
   };
 
-  const handleSubmitReview = async () => {
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+      alert("Please login to submit a review");
+      return;
+    }
+
     if (!formData.title || !formData.comment) {
       alert("Please fill in all required fields");
       return;
@@ -91,43 +100,55 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
     });
 
     try {
-      const response = await fetch("/api/reviews", {
-        method: "POST",
+      const response = await axiosInstance.post("/reviews", data, {
         headers: {
-          Authorization: `Bearer ${currentUser.token}`,
+          "Content-Type": "multipart/form-data",
         },
-        body: data,
       });
 
-      if (response.ok) {
-        setShowReviewForm(false);
-        setFormData({ rating: 5, title: "", comment: "", photos: [] });
-        loadReviews();
-        loadStats();
-        alert("Review submitted successfully!");
-      }
+      console.log("Review submitted:", response.data);
+
+      setShowReviewForm(false);
+      setFormData({ rating: 5, title: "", comment: "", photos: [] });
+
+      // Reload reviews and stats
+      await loadReviews();
+      await loadStats();
+
+      alert("Review submitted successfully!");
     } catch (error) {
       console.error("Error submitting review:", error);
-      alert("Failed to submit review");
+      alert(error.response?.data?.message || "Failed to submit review");
     }
   };
 
   const handleVote = async (reviewId, voteType) => {
+    if (!currentUser) {
+      alert("Please login to vote");
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/reviews/${reviewId}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${currentUser.token}`,
-        },
-        body: JSON.stringify({ voteType }),
+      const response = await axiosInstance.post(`/reviews/${reviewId}/vote`, {
+        voteType,
       });
 
-      if (response.ok) {
-        loadReviews();
-      }
+      // Update the review in the list
+      setReviews(
+        reviews.map((review) => {
+          if (review._id === reviewId) {
+            return {
+              ...review,
+              helpfulCount: response.data.data.helpfulCount,
+              unhelpfulCount: response.data.data.unhelpfulCount,
+            };
+          }
+          return review;
+        })
+      );
     } catch (error) {
       console.error("Error voting:", error);
+      alert("Failed to submit vote");
     }
   };
 
@@ -159,6 +180,7 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
 
   return (
     <div className="space-y-6">
+      {/* Statistics */}
       {stats && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -166,7 +188,10 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
               <div className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
                 {stats.averageRating}
               </div>
-              <StarRating rating={Math.round(stats.averageRating)} readonly />
+              <StarRating
+                rating={Math.round(Number(stats.averageRating))}
+                readonly
+              />
               <p className="text-gray-600 dark:text-gray-400 mt-2">
                 Based on {stats.totalReviews} reviews
               </p>
@@ -196,36 +221,10 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
               ))}
             </div>
           </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.verifiedBookings}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Verified
-              </p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.withPhotos}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                With Photos
-              </p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.withGuideReply}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                With Reply
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
+      {/* Filters and Sort */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-gray-800 rounded-lg p-4 shadow border border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -271,13 +270,14 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
         )}
       </div>
 
+      {/* Review Form */}
       {showReviewForm && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
             Write Your Review
           </h3>
 
-          <div className="space-y-4">
+          <form onSubmit={handleSubmitReview} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Rating *
@@ -338,6 +338,7 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
                           className="w-full h-20 object-cover rounded-lg"
                         />
                         <button
+                          type="button"
                           onClick={() => removePhoto(index)}
                           className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
                         >
@@ -368,26 +369,32 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
 
             <div className="flex justify-end space-x-3">
               <button
+                type="button"
                 onClick={() => setShowReviewForm(false)}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSubmitReview}
+                type="submit"
                 className="px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg font-medium transition"
               >
                 Submit Review
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
+      {/* Reviews List */}
       <div className="space-y-4">
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 dark:border-primary-400 mx-auto"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <p className="text-red-600 dark:text-red-400">{error}</p>
           </div>
         ) : reviews.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
@@ -435,11 +442,6 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
                   {review.comment}
                 </p>
-                {review.isEdited && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic">
-                    (Edited)
-                  </p>
-                )}
               </div>
 
               {review.photos && review.photos.length > 0 && (
@@ -449,10 +451,6 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
                       key={index}
                       src={photo}
                       alt={`Review photo ${index + 1}`}
-                      onClick={() => {
-                        setSelectedPhotos(review.photos);
-                        setShowPhotoModal(true);
-                      }}
                       className="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
                     />
                   ))}
@@ -476,61 +474,30 @@ const EnhancedReviews = ({ packageId, currentUser }) => {
                 </div>
               )}
 
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => handleVote(review._id, "helpful")}
-                    className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition"
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                    <span className="text-sm">{review.helpfulCount || 0}</span>
-                  </button>
-                  <button
-                    onClick={() => handleVote(review._id, "unhelpful")}
-                    className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition"
-                  >
-                    <ThumbsDown className="h-4 w-4" />
-                    <span className="text-sm">
-                      {review.unhelpfulCount || 0}
-                    </span>
-                  </button>
-                </div>
-
-                {currentUser && review.user._id === currentUser._id && (
-                  <div className="flex items-center space-x-2">
-                    <button className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition">
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
+              <div className="flex items-center space-x-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => handleVote(review._id, "helpful")}
+                  className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition"
+                  disabled={!currentUser}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <span className="text-sm">{review.helpfulCount || 0}</span>
+                </button>
+                <button
+                  onClick={() => handleVote(review._id, "unhelpful")}
+                  className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition"
+                  disabled={!currentUser}
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  <span className="text-sm">{review.unhelpfulCount || 0}</span>
+                </button>
               </div>
             </div>
           ))
         )}
       </div>
-
-      {showPhotoModal && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-          <button
-            onClick={() => setShowPhotoModal(false)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition"
-          >
-            <X className="h-8 w-8" />
-          </button>
-          <div className="max-w-4xl max-h-[90vh]">
-            <img
-              src={selectedPhotos[0]}
-              alt="Review photo"
-              className="max-w-full max-h-[90vh] object-contain"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default EnhancedReviews;
+export default Reviews;

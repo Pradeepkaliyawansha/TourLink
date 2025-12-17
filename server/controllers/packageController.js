@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Package from "../models/Package.js";
+import mongoose from "mongoose";
 
 // Helper function to get full image URLs
 const getImageUrls = (images, req) => {
@@ -70,22 +71,57 @@ export const getPackages = asyncHandler(async (req, res) => {
 // @route   GET /api/packages/:id
 // @access  Public
 export const getPackage = asyncHandler(async (req, res) => {
-  const pkg = await Package.findById(req.params.id)
-    .populate("guide", "name email phone avatar")
-    .populate("reviews.user", "name avatar");
+  const { id } = req.params;
 
-  if (!pkg) {
-    res.status(404);
-    throw new Error("Package not found");
+  console.log("Fetching package with ID:", id);
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    console.error("Invalid package ID format:", id);
+    res.status(400);
+    throw new Error("Invalid package ID format");
   }
 
-  const pkgObj = pkg.toObject();
-  pkgObj.images = getImageUrls(pkgObj.images, req);
+  try {
+    const pkg = await Package.findById(id)
+      .populate("guide", "name email phone avatar createdAt")
+      .lean(); // Use lean() for better performance
 
-  res.json({
-    success: true,
-    data: pkgObj,
-  });
+    if (!pkg) {
+      console.log("Package not found with ID:", id);
+      res.status(404);
+      throw new Error("Package not found");
+    }
+
+    console.log("Package found:", pkg.title);
+
+    // Transform images to full URLs
+    pkg.images = getImageUrls(pkg.images, req);
+
+    // Ensure reviews is an array (even if empty)
+    if (!pkg.reviews) {
+      pkg.reviews = [];
+    }
+
+    res.json({
+      success: true,
+      data: pkg,
+    });
+  } catch (error) {
+    console.error("Error fetching package:", error);
+
+    // If it's already a handled error, rethrow it
+    if (
+      error.message === "Package not found" ||
+      error.message === "Invalid package ID format"
+    ) {
+      throw error;
+    }
+
+    // Otherwise, it's a database error
+    res.status(500);
+    throw new Error("Error fetching package details: " + error.message);
+  }
 });
 
 // @desc    Create new package
@@ -180,7 +216,15 @@ export const updatePackage = asyncHandler(async (req, res) => {
   console.log("📦 Update Package Request Body:", req.body);
   console.log("📁 Uploaded Files:", req.files);
 
-  let pkg = await Package.findById(req.params.id);
+  const { id } = req.params;
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error("Invalid package ID format");
+  }
+
+  let pkg = await Package.findById(id);
 
   if (!pkg) {
     res.status(404);
@@ -271,7 +315,7 @@ export const updatePackage = asyncHandler(async (req, res) => {
 
   console.log("✅ Update Data - Images:", updateData.images);
 
-  pkg = await Package.findByIdAndUpdate(req.params.id, updateData, {
+  pkg = await Package.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   });
@@ -290,7 +334,15 @@ export const updatePackage = asyncHandler(async (req, res) => {
 // @route   DELETE /api/packages/:id
 // @access  Private (Guide only)
 export const deletePackage = asyncHandler(async (req, res) => {
-  const pkg = await Package.findById(req.params.id);
+  const { id } = req.params;
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error("Invalid package ID format");
+  }
+
+  const pkg = await Package.findById(id);
 
   if (!pkg) {
     res.status(404);
@@ -331,43 +383,10 @@ export const getMyPackages = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Add review to package
+// @desc    Add review to package (DEPRECATED - Use Review Model)
 // @route   POST /api/packages/:id/reviews
 // @access  Private
 export const addReview = asyncHandler(async (req, res) => {
-  const { rating, comment } = req.body;
-
-  const pkg = await Package.findById(req.params.id);
-
-  if (!pkg) {
-    res.status(404);
-    throw new Error("Package not found");
-  }
-
-  const alreadyReviewed = pkg.reviews.find(
-    (r) => r.user.toString() === req.user._id.toString()
-  );
-
-  if (alreadyReviewed) {
-    res.status(400);
-    throw new Error("Package already reviewed");
-  }
-
-  const review = {
-    user: req.user._id,
-    rating: Number(rating),
-    comment,
-  };
-
-  pkg.reviews.push(review);
-  pkg.rating =
-    pkg.reviews.reduce((acc, item) => item.rating + acc, 0) /
-    pkg.reviews.length;
-
-  await pkg.save();
-
-  res.status(201).json({
-    success: true,
-    message: "Review added successfully",
-  });
+  res.status(400);
+  throw new Error("Please use /api/reviews endpoint to submit reviews");
 });

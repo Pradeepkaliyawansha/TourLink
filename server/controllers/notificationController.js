@@ -2,6 +2,89 @@ import asyncHandler from "express-async-handler";
 import Notification from "../models/Notification.js";
 import NotificationPreference from "../models/NotificationPreference.js";
 
+// Helper function to create default preferences
+const createDefaultPreferences = (userId) => {
+  return {
+    user: userId,
+    email: {
+      enabled: true,
+      types: {
+        message: true,
+        booking_confirmation: true,
+        booking_request: true,
+        package_update: true,
+        new_review: true,
+        review_reply: true,
+        price_drop: true,
+        package_created: false,
+        system: true,
+      },
+      frequency: "instant",
+    },
+    inApp: {
+      enabled: true,
+      types: {
+        message: true,
+        booking_confirmation: true,
+        booking_request: true,
+        package_update: true,
+        new_review: true,
+        review_reply: true,
+        price_drop: true,
+        package_created: true,
+        system: true,
+      },
+      sound: true,
+      desktop: true,
+    },
+    push: {
+      enabled: false,
+      subscription: null,
+      types: {
+        message: true,
+        booking_confirmation: true,
+        booking_request: true,
+        package_update: false,
+        new_review: true,
+        review_reply: true,
+        price_drop: false,
+        package_created: false,
+        system: true,
+      },
+    },
+    doNotDisturb: {
+      enabled: false,
+      startTime: "22:00",
+      endTime: "08:00",
+      days: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+    },
+    digest: {
+      enabled: false,
+      frequency: "daily",
+      time: "09:00",
+      types: [
+        "booking_confirmation",
+        "booking_request",
+        "new_review",
+        "review_reply",
+      ],
+    },
+    muted: {
+      users: [],
+      packages: [],
+    },
+    language: "en",
+  };
+};
+
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
@@ -73,7 +156,6 @@ export const getNotificationById = asyncHandler(async (req, res) => {
     throw new Error("Notification not found");
   }
 
-  // Check authorization
   if (notification.recipient.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Not authorized to access this notification");
@@ -109,65 +191,12 @@ export const markAsRead = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Mark notification as unread
-// @route   PUT /api/notifications/:id/unread
-// @access  Private
-export const markAsUnread = asyncHandler(async (req, res) => {
-  const notification = await Notification.findById(req.params.id);
-
-  if (!notification) {
-    res.status(404);
-    throw new Error("Notification not found");
-  }
-
-  if (notification.recipient.toString() !== req.user._id.toString()) {
-    res.status(403);
-    throw new Error("Not authorized");
-  }
-
-  notification.read = false;
-  notification.readAt = null;
-  await notification.save();
-
-  res.json({
-    success: true,
-    data: notification,
-  });
-});
-
 // @desc    Mark all notifications as read
 // @route   PUT /api/notifications/read-all
 // @access  Private
 export const markAllAsRead = asyncHandler(async (req, res) => {
   const result = await Notification.updateMany(
     { recipient: req.user._id, read: false },
-    { read: true, readAt: new Date() }
-  );
-
-  res.json({
-    success: true,
-    message: `Marked ${result.modifiedCount} notifications as read`,
-    modifiedCount: result.modifiedCount,
-  });
-});
-
-// @desc    Mark multiple notifications as read
-// @route   PUT /api/notifications/mark-read-bulk
-// @access  Private
-export const markMultipleAsRead = asyncHandler(async (req, res) => {
-  const { notificationIds } = req.body;
-
-  if (!notificationIds || !Array.isArray(notificationIds)) {
-    res.status(400);
-    throw new Error("Please provide an array of notification IDs");
-  }
-
-  const result = await Notification.updateMany(
-    {
-      _id: { $in: notificationIds },
-      recipient: req.user._id,
-      read: false,
-    },
     { read: true, readAt: new Date() }
   );
 
@@ -218,104 +247,161 @@ export const deleteReadNotifications = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Delete all notifications
-// @route   DELETE /api/notifications/all
-// @access  Private
-export const deleteAllNotifications = asyncHandler(async (req, res) => {
-  const result = await Notification.deleteMany({
-    recipient: req.user._id,
-  });
-
-  res.json({
-    success: true,
-    message: `Deleted ${result.deletedCount} notifications`,
-    deletedCount: result.deletedCount,
-  });
-});
-
-// @desc    Delete multiple notifications
-// @route   DELETE /api/notifications/bulk
-// @access  Private
-export const deleteMultipleNotifications = asyncHandler(async (req, res) => {
-  const { notificationIds } = req.body;
-
-  if (!notificationIds || !Array.isArray(notificationIds)) {
-    res.status(400);
-    throw new Error("Please provide an array of notification IDs");
-  }
-
-  const result = await Notification.deleteMany({
-    _id: { $in: notificationIds },
-    recipient: req.user._id,
-  });
-
-  res.json({
-    success: true,
-    message: `Deleted ${result.deletedCount} notifications`,
-    deletedCount: result.deletedCount,
-  });
-});
-
 // @desc    Get notification preferences
 // @route   GET /api/notifications/preferences
 // @access  Private
 export const getPreferences = asyncHandler(async (req, res) => {
-  const preferences = await NotificationPreference.getOrCreate(req.user._id);
+  try {
+    console.log(`📋 Fetching preferences for user: ${req.user._id}`);
 
-  res.json({
-    success: true,
-    data: preferences,
-  });
+    let preferences = await NotificationPreference.findOne({
+      user: req.user._id,
+    });
+
+    if (!preferences) {
+      console.log(`🆕 Creating default preferences for user: ${req.user._id}`);
+
+      const defaultPrefs = createDefaultPreferences(req.user._id);
+      preferences = await NotificationPreference.create(defaultPrefs);
+
+      console.log(`✅ Default preferences created successfully`);
+    }
+
+    res.json({
+      success: true,
+      data: preferences,
+    });
+  } catch (error) {
+    console.error("❌ Error in getPreferences:", error);
+
+    // Send detailed error for debugging
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch notification preferences",
+      error: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
+  }
 });
 
 // @desc    Update notification preferences
 // @route   PUT /api/notifications/preferences
 // @access  Private
 export const updatePreferences = asyncHandler(async (req, res) => {
-  let preferences = await NotificationPreference.findOne({
-    user: req.user._id,
-  });
+  try {
+    console.log(`📝 Updating preferences for user: ${req.user._id}`);
 
-  if (!preferences) {
-    preferences = await NotificationPreference.create({
+    let preferences = await NotificationPreference.findOne({
       user: req.user._id,
-      ...req.body,
     });
-  } else {
-    // Update preferences
-    Object.assign(preferences, req.body);
-    await preferences.save();
-  }
 
-  res.json({
-    success: true,
-    data: preferences,
-    message: "Notification preferences updated successfully",
-  });
+    if (!preferences) {
+      console.log(
+        `🆕 Creating preferences during update for user: ${req.user._id}`
+      );
+
+      const defaultPrefs = createDefaultPreferences(req.user._id);
+      preferences = new NotificationPreference(defaultPrefs);
+    }
+
+    // Update nested objects carefully
+    if (req.body.email) {
+      if (req.body.email.enabled !== undefined) {
+        preferences.email.enabled = req.body.email.enabled;
+      }
+      if (req.body.email.types) {
+        Object.assign(preferences.email.types, req.body.email.types);
+      }
+      if (req.body.email.frequency) {
+        preferences.email.frequency = req.body.email.frequency;
+      }
+    }
+
+    if (req.body.inApp) {
+      if (req.body.inApp.enabled !== undefined) {
+        preferences.inApp.enabled = req.body.inApp.enabled;
+      }
+      if (req.body.inApp.types) {
+        Object.assign(preferences.inApp.types, req.body.inApp.types);
+      }
+      if (req.body.inApp.sound !== undefined) {
+        preferences.inApp.sound = req.body.inApp.sound;
+      }
+      if (req.body.inApp.desktop !== undefined) {
+        preferences.inApp.desktop = req.body.inApp.desktop;
+      }
+    }
+
+    if (req.body.push) {
+      if (req.body.push.enabled !== undefined) {
+        preferences.push.enabled = req.body.push.enabled;
+      }
+      if (req.body.push.types) {
+        Object.assign(preferences.push.types, req.body.push.types);
+      }
+      if (req.body.push.subscription !== undefined) {
+        preferences.push.subscription = req.body.push.subscription;
+      }
+    }
+
+    if (req.body.doNotDisturb) {
+      Object.assign(preferences.doNotDisturb, req.body.doNotDisturb);
+    }
+
+    if (req.body.digest) {
+      Object.assign(preferences.digest, req.body.digest);
+    }
+
+    if (req.body.language) {
+      preferences.language = req.body.language;
+    }
+
+    await preferences.save();
+
+    console.log(`✅ Preferences updated successfully`);
+
+    res.json({
+      success: true,
+      data: preferences,
+      message: "Notification preferences updated successfully",
+    });
+  } catch (error) {
+    console.error("❌ Error in updatePreferences:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update notification preferences",
+      error: error.message,
+    });
+  }
 });
 
 // @desc    Reset preferences to default
 // @route   PUT /api/notifications/preferences/reset
 // @access  Private
 export const resetPreferences = asyncHandler(async (req, res) => {
-  let preferences = await NotificationPreference.findOne({
-    user: req.user._id,
-  });
+  try {
+    let preferences = await NotificationPreference.findOne({
+      user: req.user._id,
+    });
 
-  if (preferences) {
-    await preferences.deleteOne();
+    if (preferences) {
+      await preferences.deleteOne();
+    }
+
+    const defaultPrefs = createDefaultPreferences(req.user._id);
+    preferences = await NotificationPreference.create(defaultPrefs);
+
+    res.json({
+      success: true,
+      data: preferences,
+      message: "Notification preferences reset to defaults",
+    });
+  } catch (error) {
+    console.error("Error resetting preferences:", error);
+    res.status(500);
+    throw new Error("Failed to reset preferences");
   }
-
-  // Create new preferences with defaults
-  preferences = await NotificationPreference.create({
-    user: req.user._id,
-  });
-
-  res.json({
-    success: true,
-    data: preferences,
-    message: "Notification preferences reset to defaults",
-  });
 });
 
 // @desc    Subscribe to push notifications
@@ -334,9 +420,8 @@ export const subscribeToPush = asyncHandler(async (req, res) => {
   });
 
   if (!preferences) {
-    preferences = await NotificationPreference.create({
-      user: req.user._id,
-    });
+    const defaultPrefs = createDefaultPreferences(req.user._id);
+    preferences = await NotificationPreference.create(defaultPrefs);
   }
 
   preferences.push.enabled = true;
@@ -370,227 +455,18 @@ export const unsubscribeFromPush = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Test notification (for development)
-// @route   POST /api/notifications/test
-// @access  Private
-export const sendTestNotification = asyncHandler(async (req, res) => {
-  const { type = "system", title, message } = req.body;
-
-  if (!title || !message) {
-    res.status(400);
-    throw new Error("Please provide title and message");
-  }
-
-  const notification = await Notification.createNotification({
-    recipient: req.user._id,
-    type,
-    title,
-    message,
-    priority: "normal",
-  });
-
-  // Emit via Socket.IO if available
-  const io = req.app.locals.io;
-  if (io) {
-    io.to(req.user._id.toString()).emit("notification", {
-      id: notification._id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      priority: notification.priority,
-      createdAt: notification.createdAt,
-    });
-  }
-
-  res.json({
-    success: true,
-    message: "Test notification sent",
-    data: notification,
-  });
-});
-
-// @desc    Get notification statistics
-// @route   GET /api/notifications/stats
-// @access  Private
-export const getNotificationStats = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-
-  // Get total counts
-  const totalCount = await Notification.countDocuments({ recipient: userId });
-  const unreadCount = await Notification.countDocuments({
-    recipient: userId,
-    read: false,
-  });
-  const readCount = totalCount - unreadCount;
-
-  // Get counts by type
-  const typeStats = await Notification.aggregate([
-    { $match: { recipient: userId } },
-    { $group: { _id: "$type", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-  ]);
-
-  // Get counts by priority
-  const priorityStats = await Notification.aggregate([
-    { $match: { recipient: userId } },
-    { $group: { _id: "$priority", count: { $sum: 1 } } },
-  ]);
-
-  // Get recent notification count (last 24 hours)
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recentCount = await Notification.countDocuments({
-    recipient: userId,
-    createdAt: { $gte: yesterday },
-  });
-
-  // Get recent unread count
-  const recentUnreadCount = await Notification.countDocuments({
-    recipient: userId,
-    read: false,
-    createdAt: { $gte: yesterday },
-  });
-
-  res.json({
-    success: true,
-    data: {
-      total: totalCount,
-      read: readCount,
-      unread: unreadCount,
-      recent24h: recentCount,
-      recentUnread24h: recentUnreadCount,
-      byType: typeStats.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {}),
-      byPriority: priorityStats.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {}),
-    },
-  });
-});
-
-// @desc    Get notifications by type
-// @route   GET /api/notifications/type/:type
-// @access  Private
-export const getNotificationsByType = asyncHandler(async (req, res) => {
-  const { type } = req.params;
-  const { page = 1, limit = 20, read } = req.query;
-
-  const validTypes = [
-    "message",
-    "booking_confirmation",
-    "booking_request",
-    "package_update",
-    "new_review",
-    "review_reply",
-    "price_drop",
-    "package_created",
-    "system",
-  ];
-
-  if (!validTypes.includes(type)) {
-    res.status(400);
-    throw new Error("Invalid notification type");
-  }
-
-  const query = { recipient: req.user._id, type };
-
-  if (read !== undefined) {
-    query.read = read === "true";
-  }
-
-  const skip = (Number(page) - 1) * Number(limit);
-
-  const notifications = await Notification.find(query)
-    .populate("sender", "name avatar")
-    .populate("data.packageId", "title images")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(Number(limit));
-
-  const total = await Notification.countDocuments(query);
-
-  res.json({
-    success: true,
-    count: notifications.length,
-    total,
-    page: Number(page),
-    pages: Math.ceil(total / Number(limit)),
-    data: notifications,
-  });
-});
-
-// @desc    Check if user has specific notification
-// @route   GET /api/notifications/check/:type/:referenceId
-// @access  Private
-export const checkNotificationExists = asyncHandler(async (req, res) => {
-  const { type, referenceId } = req.params;
-
-  let query = {
-    recipient: req.user._id,
-    type,
-  };
-
-  // Check in data fields based on type
-  if (type === "new_review" || type === "package_update") {
-    query["data.packageId"] = referenceId;
-  } else if (type === "message") {
-    query["data.messageId"] = referenceId;
-  }
-
-  const exists = await Notification.exists(query);
-
-  res.json({
-    success: true,
-    exists: !!exists,
-  });
-});
-
-// @desc    Get recent notifications (last 7 days)
-// @route   GET /api/notifications/recent
-// @access  Private
-export const getRecentNotifications = asyncHandler(async (req, res) => {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const notifications = await Notification.find({
-    recipient: req.user._id,
-    createdAt: { $gte: sevenDaysAgo },
-  })
-    .populate("sender", "name avatar")
-    .populate("data.packageId", "title images")
-    .sort({ createdAt: -1 })
-    .limit(50);
-
-  res.json({
-    success: true,
-    count: notifications.length,
-    data: notifications,
-  });
-});
-
 // Export all functions
 export default {
   getNotifications,
   getUnreadCount,
   getNotificationById,
   markAsRead,
-  markAsUnread,
   markAllAsRead,
-  markMultipleAsRead,
   deleteNotification,
   deleteReadNotifications,
-  deleteAllNotifications,
-  deleteMultipleNotifications,
   getPreferences,
   updatePreferences,
   resetPreferences,
   subscribeToPush,
   unsubscribeFromPush,
-  sendTestNotification,
-  getNotificationStats,
-  getNotificationsByType,
-  checkNotificationExists,
-  getRecentNotifications,
 };

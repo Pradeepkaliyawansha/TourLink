@@ -382,7 +382,7 @@ const PackageDetails = () => {
               </button>
               <button
                 onClick={() => navigate(`/packages/${pkg._id}/book`)}
-                className="w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium"
+                className="w-full mt-4 flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white  dark:bg-primary-500 dark:hover:bg-primary-600 px-6 py-3 rounded-lg font-medium transition shadow-lg hover:shadow-xl"
               >
                 Book This Tour
               </button>

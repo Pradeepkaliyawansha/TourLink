@@ -12,6 +12,8 @@ import {
   LayoutDashboard,
   User,
   ChevronDown,
+  Book,
+  Package2,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useState, useRef, useEffect } from "react";
@@ -77,15 +79,20 @@ const Navbar = () => {
                 {user.role === "guide" && (
                   <Link
                     to="/my-packages"
-                    className="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
-                    My Packages
+                    <Package2 className="h-4 w-4" />
+                    <span>My Packages</span>
                   </Link>
                 )}
 
                 {user.role === "tourist" && (
-                  <Link to="/my-bookings" className="...">
-                    My Bookings
+                  <Link
+                    to="/my-bookings"
+                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <Book className="h-4 w-4" />
+                    <span>My Bookings</span>
                   </Link>
                 )}
 

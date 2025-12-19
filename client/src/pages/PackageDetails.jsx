@@ -54,6 +54,8 @@ const PackageDetails = () => {
     fetchPackage();
   }, [id, navigate]);
 
+  const isOwnPackage = user && pkg?.guide?._id && user._id === pkg.guide._id;
+
   const fetchGuideResponseRate = async (guideId) => {
     try {
       const response = await axiosInstance.get(
@@ -350,7 +352,7 @@ const PackageDetails = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Price per person
+                    Price per Tour
                   </p>
                   <div className="text-4xl font-bold text-primary-600 dark:text-primary-400">
                     ${pkg.price}
@@ -372,26 +374,28 @@ const PackageDetails = () => {
                   {pkg.difficulty}
                 </span>
               </div>
-
-              <button
-                onClick={handleChatClick}
-                className="w-full flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white px-6 py-3 rounded-lg font-medium transition shadow-lg hover:shadow-xl"
-              >
-                <MessageCircle className="h-5 w-5" />
-                <span>Contact Guide</span>
-              </button>
-              <button
-                onClick={() => navigate(`/packages/${pkg._id}/book`)}
-                className="w-full mt-4 flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white  dark:bg-primary-500 dark:hover:bg-primary-600 px-6 py-3 rounded-lg font-medium transition shadow-lg hover:shadow-xl"
-              >
-                Book This Tour
-              </button>
-
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
-                {user
-                  ? "Chat with the guide to book this tour"
-                  : "Login to contact the guide"}
-              </p>
+              {!isOwnPackage && (
+                <>
+                  <button
+                    onClick={handleChatClick}
+                    className="w-full flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white px-6 py-3 rounded-lg font-medium transition shadow-lg hover:shadow-xl"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    <span>Contact Guide</span>
+                  </button>
+                  <button
+                    onClick={() => navigate(`/packages/${pkg._id}/book`)}
+                    className="w-full mt-4 flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white  dark:bg-primary-500 dark:hover:bg-primary-600 px-6 py-3 rounded-lg font-medium transition shadow-lg hover:shadow-xl"
+                  >
+                    Book This Tour
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+                    {user
+                      ? "Chat with the guide to book this tour"
+                      : "Login to contact the guide"}
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Guide Info Card */}

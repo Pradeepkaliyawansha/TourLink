@@ -256,13 +256,14 @@ export const getPreferences = asyncHandler(async (req, res) => {
 
     let preferences = await NotificationPreference.findOne({
       user: req.user._id,
-    });
+    }).lean();
 
     if (!preferences) {
       console.log(`🆕 Creating default preferences for user: ${req.user._id}`);
 
       const defaultPrefs = createDefaultPreferences(req.user._id);
       preferences = await NotificationPreference.create(defaultPrefs);
+      preferences = preferences.toObject();
 
       console.log(`✅ Default preferences created successfully`);
     }
@@ -273,13 +274,13 @@ export const getPreferences = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error in getPreferences:", error);
+    console.error("Error stack:", error.stack);
 
-    // Send detailed error for debugging
     res.status(500).json({
       success: false,
       message: "Failed to fetch notification preferences",
       error: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 });
@@ -290,6 +291,7 @@ export const getPreferences = asyncHandler(async (req, res) => {
 export const updatePreferences = asyncHandler(async (req, res) => {
   try {
     console.log(`📝 Updating preferences for user: ${req.user._id}`);
+    console.log(`📦 Request body:`, JSON.stringify(req.body, null, 2));
 
     let preferences = await NotificationPreference.findOne({
       user: req.user._id,
@@ -367,11 +369,13 @@ export const updatePreferences = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error in updatePreferences:", error);
+    console.error("Error stack:", error.stack);
 
     res.status(500).json({
       success: false,
       message: "Failed to update notification preferences",
       error: error.message,
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 });
@@ -381,6 +385,8 @@ export const updatePreferences = asyncHandler(async (req, res) => {
 // @access  Private
 export const resetPreferences = asyncHandler(async (req, res) => {
   try {
+    console.log(`🔄 Resetting preferences for user: ${req.user._id}`);
+
     let preferences = await NotificationPreference.findOne({
       user: req.user._id,
     });
@@ -398,9 +404,9 @@ export const resetPreferences = asyncHandler(async (req, res) => {
       message: "Notification preferences reset to defaults",
     });
   } catch (error) {
-    console.error("Error resetting preferences:", error);
+    console.error("❌ Error resetting preferences:", error);
     res.status(500);
-    throw new Error("Failed to reset preferences");
+    throw new Error("Failed to reset preferences: " + error.message);
   }
 });
 
@@ -454,19 +460,3 @@ export const unsubscribeFromPush = asyncHandler(async (req, res) => {
     message: "Successfully unsubscribed from push notifications",
   });
 });
-
-// Export all functions
-export default {
-  getNotifications,
-  getUnreadCount,
-  getNotificationById,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
-  deleteReadNotifications,
-  getPreferences,
-  updatePreferences,
-  resetPreferences,
-  subscribeToPush,
-  unsubscribeFromPush,
-};

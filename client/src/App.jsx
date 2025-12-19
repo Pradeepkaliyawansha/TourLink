@@ -13,6 +13,9 @@ import ContactUs from "./pages/ContactUs";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserProfile from "./pages/UserProfile";
 import NotificationSettings from "./pages/NotificationSettings"; // NEW
+import BookingForm from "./pages/BookingForm";
+import MyBookings from "./pages/MyBookings";
+import BookingDetails from "./pages/BookingDetails";
 
 function App() {
   const { user } = useSelector((state) => state.auth);
@@ -77,6 +80,19 @@ function App() {
         <Route
           path="/chat/:userId?"
           element={user ? <Chat /> : <Navigate to="/login" replace />}
+        />
+
+        <Route
+          path="/packages/:id/book"
+          element={user ? <BookingForm /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/my-bookings"
+          element={user ? <MyBookings /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/bookings/:id"
+          element={user ? <BookingDetails /> : <Navigate to="/login" />}
         />
 
         <Route path="/contact" element={<ContactUs />} />

@@ -380,6 +380,12 @@ const PackageDetails = () => {
                 <MessageCircle className="h-5 w-5" />
                 <span>Contact Guide</span>
               </button>
+              <button
+                onClick={() => navigate(`/packages/${pkg._id}/book`)}
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium"
+              >
+                Book This Tour
+              </button>
 
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
                 {user

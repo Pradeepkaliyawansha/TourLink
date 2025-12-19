@@ -83,6 +83,12 @@ const Navbar = () => {
                   </Link>
                 )}
 
+                {user.role === "tourist" && (
+                  <Link to="/my-bookings" className="...">
+                    My Bookings
+                  </Link>
+                )}
+
                 {/* Admin Dashboard Button - Only visible to admins */}
                 {user.role === "admin" && (
                   <Link
